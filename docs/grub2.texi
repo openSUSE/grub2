@@ -1,7 +1,7 @@
 \input texinfo
 @c -*-texinfo-*-
 @c %**start of header
-@setfilename grub.info
+@setfilename grub2.info
 @include version.texi
 @settitle GNU GRUB Manual @value{VERSION}
 @c Unify all our little indices for now.
