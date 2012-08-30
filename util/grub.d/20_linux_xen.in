@@ -101,6 +101,11 @@ linux_entry ()
   type="$4"
   args="$5"
   xen_args="$6"
+  if [ -n "${linux_root_device_thisversion}" ]; then
+    root_device="root=${linux_root_device_thisversion}"
+  else
+    root_device=""
+  fi
   if [ -z "$boot_device_id" ]; then
       boot_device_id="$(grub_get_device_id "${GRUB_DEVICE}")"
   fi
@@ -140,7 +145,7 @@ linux_entry ()
         fi
 	${xen_loader}	${rel_xen_dirname}/${xen_basename} placeholder ${xen_args} \${xen_rm_opts}
 	echo	'$(echo "$lmessage" | grub_quote)'
-	${module_loader}	${rel_dirname}/${basename} placeholder root=${linux_root_device_thisversion} ${args}
+	${module_loader}	${rel_dirname}/${basename} placeholder ${root_device} ${args}
 EOF
   if test -n "${initrd}" ; then
     # TRANSLATORS: ramdisk isn't identifier. Should be translated.
