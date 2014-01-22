@@ -9,6 +9,7 @@
 #elif defined(__powerpc__)
 #include "../powerpc/cache.S"
 #elif defined(__ia64__) || defined(__arm__) || defined(__aarch64__) || defined(__mips__)
+#elif defined(__s390x__)
 #else
 #error "No target cpu type is defined"
 #endif
