@@ -111,8 +111,8 @@ grub_net_arp_send_request (struct grub_net_network_level_interface *inf,
 }
 
 grub_err_t
-grub_net_arp_receive (struct grub_net_buff *nb,
-		      struct grub_net_card *card)
+grub_net_arp_receive (struct grub_net_buff *nb, struct grub_net_card *card,
+                      grub_uint16_t vlantag_vid)
 {
   struct arppkt *arp_packet = (struct arppkt *) nb->data;
   grub_net_network_level_address_t sender_addr, target_addr;
@@ -138,6 +138,12 @@ grub_net_arp_receive (struct grub_net_buff *nb,
 
   FOR_NET_NETWORK_LEVEL_INTERFACES (inf)
   {
+    /* Check vlantag id */
+    if (inf->card == card &&
+        ((inf->vlantag.set && vlantag_vid != inf->vlantag.vid) ||
+         (!inf->vlantag.set && vlantag_vid != 0)))
+        continue;
+
     /* Am I the protocol address target? */
     if (grub_net_addr_cmp (&inf->address, &target_addr) == 0
 	&& arp_packet->op == grub_cpu_to_be16_compile_time (ARP_REQUEST))
