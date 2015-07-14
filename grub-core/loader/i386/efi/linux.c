@@ -162,7 +162,7 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
   grub_file_t file = 0;
   struct linux_i386_kernel_header lh;
   grub_ssize_t len, start, filelen;
-  void *kernel;
+  void *kernel = NULL;
   grub_err_t err;
 
   grub_dl_ref (my_mod);
@@ -210,10 +210,6 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
       goto fail;
     }
 
-  grub_file_seek (file, 0);
-
-  grub_free(kernel);
-
   params = grub_efi_allocate_pages_max (0x3fffffff, BYTES_TO_PAGES(16384));
 
   if (! params)
@@ -224,13 +220,7 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
 
   grub_memset (params, 0, 16384);
 
-  if (grub_file_read (file, &lh, sizeof (lh)) != sizeof (lh))
-    {
-      if (!grub_errno)
-	grub_error (GRUB_ERR_BAD_OS, N_("premature end of file %s"),
-		    argv[0]);
-      goto fail;
-    }
+  grub_memcpy (&lh, kernel, sizeof (lh));
 
   if (lh.boot_flag != grub_cpu_to_le16 (0xaa55))
     {
@@ -293,26 +283,11 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
       goto fail;
     }
 
-  if (grub_file_seek (file, start) == (grub_off_t) -1)
-    {
-      grub_error (GRUB_ERR_BAD_OS, N_("premature end of file %s"),
-		  argv[0]);
-      goto fail;
-    }
+  grub_memcpy (kernel_mem, (char *)kernel + start, len);
+  grub_loader_set (grub_linuxefi_boot, grub_linuxefi_unload, 0);
+  loaded=1;
 
-  if (grub_file_read (file, kernel_mem, len) != len && !grub_errno)
-    {
-      grub_error (GRUB_ERR_BAD_OS, N_("premature end of file %s"),
-		  argv[0]);
-    }
-
-  if (grub_errno == GRUB_ERR_NONE)
-    {
-      grub_loader_set (grub_linuxefi_boot, grub_linuxefi_unload, 0);
-      loaded = 1;
-      lh.code32_start = (grub_uint32_t)(grub_addr_t) kernel_mem;
-    }
-
+  lh.code32_start = (grub_uint32_t)(grub_uint64_t) kernel_mem;
   /* Grub linuxefi erroneously initialize linux's boot_params with non-zero values. (bsc#1025563)
 
      From https://www.kernel.org/doc/Documentation/x86/boot.txt:
@@ -328,6 +303,9 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
 
   if (file)
     grub_file_close (file);
+
+  if (kernel)
+    grub_free (kernel);
 
   if (grub_errno != GRUB_ERR_NONE)
     {
