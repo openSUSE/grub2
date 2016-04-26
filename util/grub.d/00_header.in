@@ -239,6 +239,9 @@ EOF
 	    fi
 	fi
 
+    if [ -d /sys/firmware/efi ]; then
+      echo 'echo "Please press 't' to show the boot menu on this console"'
+    fi
     cat << EOF
   set gfxmode=${GRUB_GFXMODE}
   load_video
