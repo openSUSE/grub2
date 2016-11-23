@@ -69,21 +69,14 @@ typedef struct {
 grub_err_t EXPORT_FUNC(grub_tpm_measure) (unsigned char *buf, grub_size_t size,
 					  grub_uint8_t pcr, const char *kind,
 					  const char *description);
-#if defined (GRUB_MACHINE_EFI) || defined (GRUB_MACHINE_PCBIOS)
-grub_err_t grub_tpm_execute(PassThroughToTPM_InputParamBlock *inbuf,
-			    PassThroughToTPM_OutputParamBlock *outbuf);
-grub_err_t grub_tpm_log_event(unsigned char *buf, grub_size_t size,
-			      grub_uint8_t pcr, const char *description);
-#else
-static inline grub_err_t grub_tpm_execute(PassThroughToTPM_InputParamBlock *inbuf,
-					  PassThroughToTPM_OutputParamBlock *outbuf) { return 0; };
-static inline grub_err_t grub_tpm_log_event(unsigned char *buf,
-					    grub_size_t size,
-					    grub_uint8_t pcr,
-					    const char *description)
+typedef struct grub_tpm
 {
-	return 0;
-};
-#endif
+  grub_err_t (*log_event)(unsigned char *buf, grub_size_t size,
+			grub_uint8_t pcr, const char *description);
+  grub_err_t (*execute)(PassThroughToTPM_InputParamBlock *inbuf,
+			  PassThroughToTPM_OutputParamBlock *outbuf);
+} *grub_tpm_t;
+
+extern grub_tpm_t EXPORT_VAR(grub_tpm);
 
 #endif

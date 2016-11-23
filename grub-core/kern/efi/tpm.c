@@ -7,6 +7,8 @@
 #include <grub/tpm.h>
 #include <grub/term.h>
 
+GRUB_MOD_LICENSE ("GPLv3+");
+
 static grub_efi_guid_t tpm_guid = EFI_TPM_GUID;
 static grub_efi_guid_t tpm2_guid = EFI_TPM2_GUID;
 
@@ -70,20 +72,13 @@ static grub_efi_boolean_t grub_tpm_handle_find(grub_efi_handle_t *tpm_handle,
 }
 
 static grub_err_t
-grub_tpm1_execute(grub_efi_handle_t tpm_handle,
+grub_tpm1_execute(grub_efi_tpm_protocol_t *tpm,
 		  PassThroughToTPM_InputParamBlock *inbuf,
 		  PassThroughToTPM_OutputParamBlock *outbuf)
 {
   grub_efi_status_t status;
-  grub_efi_tpm_protocol_t *tpm;
   grub_uint32_t inhdrsize = sizeof(*inbuf) - sizeof(inbuf->TPMOperandIn);
   grub_uint32_t outhdrsize = sizeof(*outbuf) - sizeof(outbuf->TPMOperandOut);
-
-  tpm = grub_efi_open_protocol (tpm_handle, &tpm_guid,
-				GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
-
-  if (!grub_tpm_present(tpm))
-    return 0;
 
   /* UEFI TPM protocol takes the raw operand block, no param block header */
   status = efi_call_5 (tpm->pass_through_to_tpm, tpm,
@@ -107,20 +102,13 @@ grub_tpm1_execute(grub_efi_handle_t tpm_handle,
 }
 
 static grub_err_t
-grub_tpm2_execute(grub_efi_handle_t tpm_handle,
+grub_tpm2_execute(grub_efi_tpm2_protocol_t *tpm,
 		  PassThroughToTPM_InputParamBlock *inbuf,
 		  PassThroughToTPM_OutputParamBlock *outbuf)
 {
   grub_efi_status_t status;
-  grub_efi_tpm2_protocol_t *tpm;
   grub_uint32_t inhdrsize = sizeof(*inbuf) - sizeof(inbuf->TPMOperandIn);
   grub_uint32_t outhdrsize = sizeof(*outbuf) - sizeof(outbuf->TPMOperandOut);
-
-  tpm = grub_efi_open_protocol (tpm_handle, &tpm2_guid,
-				GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
-
-  if (!grub_tpm2_present(tpm))
-    return 0;
 
   /* UEFI TPM protocol takes the raw operand block, no param block header */
   status = efi_call_5 (tpm->submit_command, tpm,
@@ -143,41 +131,16 @@ grub_tpm2_execute(grub_efi_handle_t tpm_handle,
   }
 }
 
-grub_err_t
-grub_tpm_execute(PassThroughToTPM_InputParamBlock *inbuf,
-		 PassThroughToTPM_OutputParamBlock *outbuf)
-{
-  grub_efi_handle_t tpm_handle;
-   grub_uint8_t protocol_version;
-
-  /* It's not a hard failure for there to be no TPM */
-  if (!grub_tpm_handle_find(&tpm_handle, &protocol_version))
-    return 0;
-
-  if (protocol_version == 1) {
-    return grub_tpm1_execute(tpm_handle, inbuf, outbuf);
-  } else {
-    return grub_tpm2_execute(tpm_handle, inbuf, outbuf);
-  }
-}
-
 static grub_err_t
-grub_tpm1_log_event(grub_efi_handle_t tpm_handle, unsigned char *buf,
+grub_tpm1_log_event(grub_efi_tpm_protocol_t *tpm, unsigned char *buf,
 		    grub_size_t size, grub_uint8_t pcr,
 		    const char *description)
 {
   TCG_PCR_EVENT *event;
   grub_efi_status_t status;
-  grub_efi_tpm_protocol_t *tpm;
   grub_efi_physical_address_t lastevent;
   grub_uint32_t algorithm;
   grub_uint32_t eventnum = 0;
-
-  tpm = grub_efi_open_protocol (tpm_handle, &tpm_guid,
-				GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
-
-  if (!grub_tpm_present(tpm))
-    return 0;
 
   event = grub_zalloc(sizeof (TCG_PCR_EVENT) + grub_strlen(description) + 1);
   if (!event)
@@ -210,19 +173,12 @@ grub_tpm1_log_event(grub_efi_handle_t tpm_handle, unsigned char *buf,
 }
 
 static grub_err_t
-grub_tpm2_log_event(grub_efi_handle_t tpm_handle, unsigned char *buf,
+grub_tpm2_log_event(grub_efi_tpm2_protocol_t *tpm, unsigned char *buf,
 		   grub_size_t size, grub_uint8_t pcr,
 		   const char *description)
 {
   EFI_TCG2_EVENT *event;
   grub_efi_status_t status;
-  grub_efi_tpm2_protocol_t *tpm;
-
-  tpm = grub_efi_open_protocol (tpm_handle, &tpm2_guid,
-				GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
-
-  if (!grub_tpm2_present(tpm))
-    return 0;
 
   event = grub_zalloc(sizeof (EFI_TCG2_EVENT) + grub_strlen(description) + 1);
   if (!event)
@@ -255,19 +211,64 @@ grub_tpm2_log_event(grub_efi_handle_t tpm_handle, unsigned char *buf,
   }
 }
 
-grub_err_t
+static grub_efi_tpm_protocol_t *tpm;
+static grub_efi_tpm2_protocol_t *tpm2;
+
+static grub_err_t
+grub_tpm_execute(PassThroughToTPM_InputParamBlock *inbuf,
+		 PassThroughToTPM_OutputParamBlock *outbuf)
+{
+  if (tpm)
+    return grub_tpm1_execute(tpm, inbuf, outbuf);
+  else if (tpm2)
+    return grub_tpm2_execute(tpm2, inbuf, outbuf);
+  return GRUB_ERR_NONE;
+}
+
+static grub_err_t
 grub_tpm_log_event(unsigned char *buf, grub_size_t size, grub_uint8_t pcr,
 		   const char *description)
+{
+  if (tpm)
+    return grub_tpm1_log_event(tpm, buf, size, pcr, description);
+  else if (tpm2)
+    return grub_tpm2_log_event(tpm2, buf, size, pcr, description);
+  return GRUB_ERR_NONE;
+}
+
+static struct grub_tpm grub_efi_tpm =
+{
+  .log_event = grub_tpm_log_event,
+  .execute = grub_tpm_execute
+};
+
+GRUB_MOD_INIT (tpm)
 {
   grub_efi_handle_t tpm_handle;
   grub_efi_uint8_t protocol_version;
 
-  if (!grub_tpm_handle_find(&tpm_handle, &protocol_version))
-    return 0;
+  if (!grub_tpm_handle_find (&tpm_handle, &protocol_version))
+    return ;
 
-  if (protocol_version == 1) {
-    return grub_tpm1_log_event(tpm_handle, buf, size, pcr, description);
-  } else {
-    return grub_tpm2_log_event(tpm_handle, buf, size, pcr, description);
-  }
+  if (protocol_version == 1)
+    {
+      tpm = grub_efi_open_protocol (tpm_handle, &tpm_guid,
+				    GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+      if (tpm && grub_tpm_present(tpm))
+	grub_tpm = &grub_efi_tpm;
+    }
+  else
+    {
+      tpm2 = grub_efi_open_protocol (tpm_handle, &tpm2_guid,
+				     GRUB_EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+      if (tpm2 && grub_tpm2_present(tpm2))
+	grub_tpm = &grub_efi_tpm;
+    }
+}
+
+GRUB_MOD_FINI (tpm)
+{
+  grub_tpm = NULL;
+  tpm = NULL;
+  tpm2 = NULL;
 }

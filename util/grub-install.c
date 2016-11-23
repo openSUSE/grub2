@@ -80,6 +80,7 @@ static char *label_color;
 static char *label_bgcolor;
 static char *product_version;
 static int add_rs_codes = 1;
+static int suse_enable_tpm = 0;
 
 enum
   {
@@ -106,6 +107,7 @@ enum
     OPTION_DISK_MODULE,
     OPTION_NO_BOOTSECTOR,
     OPTION_NO_RS_CODES,
+    OPTION_SUSE_ENABLE_TPM,
     OPTION_MACPPC_DIRECTORY,
     OPTION_ZIPL_DIRECTORY,
     OPTION_LABEL_FONT,
@@ -231,6 +233,10 @@ argp_parser (int key, char *arg, struct argp_state *state)
       add_rs_codes = 0;
       return 0;
 
+    case OPTION_SUSE_ENABLE_TPM:
+      suse_enable_tpm = 1;
+      return 0;
+
     case OPTION_DEBUG:
       verbosity++;
       return 0;
@@ -292,6 +298,7 @@ static struct argp_option options[] = {
   {"no-rs-codes", OPTION_NO_RS_CODES, 0, 0,
    N_("Do not apply any reed-solomon codes when embedding core.img. "
       "This option is only available on x86 BIOS targets."), 0},
+  {"suse-enable-tpm", OPTION_SUSE_ENABLE_TPM, 0, 0, N_("install TPM modules"), 0},
 
   {"debug", OPTION_DEBUG, 0, OPTION_HIDDEN, 0, 2},
   {"no-floppy", OPTION_NO_FLOPPY, 0, OPTION_HIDDEN, 0, 2},
@@ -1294,6 +1301,9 @@ main (int argc, char *argv[])
   else if (disk_module && disk_module[0])
     grub_install_push_module (disk_module);
 
+  if (suse_enable_tpm && (is_efi || platform == GRUB_INSTALL_PLATFORM_I386_PC))
+    grub_install_push_module ("tpm");
+
   relative_grubdir = grub_make_system_path_relative_to_its_root (grubdir);
   if (relative_grubdir[0] == '\0')
     {
@@ -1730,9 +1740,9 @@ main (int argc, char *argv[])
       {
 	char *boot_img_src = grub_util_path_concat (2, 
 						  grub_install_source_directory,
-						  "boot.img");
+						  suse_enable_tpm ? "boot_tpm.img" : "boot.img");
 	char *boot_img = grub_util_path_concat (2, platdir,
-					      "boot.img");
+					      suse_enable_tpm ? "boot_tpm.img" : "boot.img");
 	grub_install_copy_file (boot_img_src, boot_img, 1);
 
 	grub_util_info ("%sgrub-bios-setup %s %s %s %s %s --directory='%s' --device-map='%s' '%s'",
@@ -1750,7 +1760,7 @@ main (int argc, char *argv[])
 			
 	/*  Now perform the installation.  */
 	if (install_bootsector)
-	  grub_util_bios_setup (platdir, "boot.img", "core.img",
+	  grub_util_bios_setup (platdir, suse_enable_tpm ? "boot_tpm.img" : "boot.img", "core.img",
 				install_drive, force,
 				fs_probe, allow_floppy, add_rs_codes);
 	break;

@@ -4,12 +4,14 @@
 #include <grub/tpm.h>
 #include <grub/misc.h>
 #include <grub/i386/pc/int.h>
+#include <grub/dl.h>
+
+GRUB_MOD_LICENSE ("GPLv3+");
 
 #define TCPA_MAGIC 0x41504354
 
-int tpm_present(void);
-
-int tpm_present(void)
+static int
+tpm_present(void)
 {
   struct grub_bios_int_registers regs;
 
@@ -24,15 +26,12 @@ int tpm_present(void)
   return 0;
 }
 
-grub_err_t
+static grub_err_t
 grub_tpm_execute(PassThroughToTPM_InputParamBlock *inbuf,
 		 PassThroughToTPM_OutputParamBlock *outbuf)
 {
   struct grub_bios_int_registers regs;
   grub_addr_t inaddr, outaddr;
-
-  if (!tpm_present())
-    return 0;
 
   inaddr = (grub_addr_t) inbuf;
   outaddr = (grub_addr_t) outbuf;
@@ -80,7 +79,7 @@ typedef struct {
 	grub_uint8_t  hashvalue[20];
 } GRUB_PACKED EventOutgoing;
 
-grub_err_t
+static grub_err_t
 grub_tpm_log_event(unsigned char *buf, grub_size_t size, grub_uint8_t pcr,
 		   const char *description)
 {
@@ -89,9 +88,6 @@ grub_tpm_log_event(unsigned char *buf, grub_size_t size, grub_uint8_t pcr,
 	EventOutgoing outgoing;
 	Event *event;
 	grub_uint32_t datalength;
-
-	if (!tpm_present())
-		return 0;
 
 	datalength = grub_strlen(description);
 	event = grub_zalloc(datalength + sizeof(Event));
@@ -129,4 +125,20 @@ grub_tpm_log_event(unsigned char *buf, grub_size_t size, grub_uint8_t pcr,
 		return grub_error (GRUB_ERR_IO, N_("TPM error %x\n"), regs.eax);
 
 	return 0;
+}
+static struct grub_tpm grub_pc_tpm =
+{
+  .log_event = grub_tpm_log_event,
+  .execute = grub_tpm_execute
+};
+
+GRUB_MOD_INIT (tpm)
+{
+  if (tpm_present())
+    grub_tpm = &grub_pc_tpm;
+}
+
+GRUB_MOD_FINI (tpm)
+{
+  grub_tpm = NULL;
 }

@@ -24,7 +24,6 @@
  *  defines for the code go here
  */
 
-#define TPM 1
 
 	/* Print message string */
 #define MSG(x)	movw $x, %si; call LOCAL(message)
