@@ -24,6 +24,7 @@
 #include <grub/command.h>
 #include <grub/file.h>
 #include <grub/efi/efi.h>
+#include <grub/efi/memory.h>
 
 static void *loaded_fdt;
 static void *fdt;
