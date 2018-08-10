@@ -209,7 +209,118 @@ dev_iterate_real (const char *name, const char *path)
 static void
 dev_iterate (const struct grub_ieee1275_devalias *alias)
 {
-  if (grub_strcmp (alias->type, "vscsi") == 0)
+  if (grub_strcmp (alias->type, "fcp") == 0){
+
+	/* If we are dealing with fcp devices, we need
+	 * to find the WWPNs and LUNs to iterate them */
+	grub_ieee1275_ihandle_t ihandle;
+	grub_uint64_t *ptr_targets, *ptr_luns;
+	unsigned int i, j, pos;
+	char *buf, *bufptr;
+
+	struct set_fcp_targets_args
+	{
+		struct grub_ieee1275_common_hdr common;
+		grub_ieee1275_cell_t method;
+		grub_ieee1275_cell_t ihandle;
+		grub_ieee1275_cell_t catch_result;
+		grub_ieee1275_cell_t nentries;
+		grub_ieee1275_cell_t table;
+	} args_targets;
+
+	struct set_fcp_luns_args
+	{
+		struct grub_ieee1275_common_hdr common;
+		grub_ieee1275_cell_t method;
+		grub_ieee1275_cell_t ihandle;
+		grub_ieee1275_cell_t wwpn_h;
+		grub_ieee1275_cell_t wwpn_l;
+		grub_ieee1275_cell_t catch_result;
+		grub_ieee1275_cell_t nentries;
+		grub_ieee1275_cell_t table;
+	} args_luns;
+
+	if(grub_ieee1275_open (alias->path, &ihandle))
+	{
+		grub_dprintf("disk", "failed to open the disk while iterating FCP disk path=%s\n", alias->path);
+		return;
+	}
+
+	INIT_IEEE1275_COMMON (&args_targets.common, "call-method", 2, 3);
+	args_targets.method = (grub_ieee1275_cell_t) "fcp-targets";
+	args_targets.ihandle = ihandle;
+	args_targets.table = 0;
+	args_targets.nentries = 0;
+
+	INIT_IEEE1275_COMMON (&args_luns.common, "call-method", 4, 3);
+	args_luns.method = (grub_ieee1275_cell_t) "fcp-luns";
+	args_luns.ihandle = ihandle;
+	args_luns.table = 0;
+	args_luns.nentries = 0;
+
+	if (IEEE1275_CALL_ENTRY_FN (&args_targets) == -1)
+	{
+	    grub_dprintf("disk", "failed to get the targets while iterating FCP disk path=%s\n", alias->path);
+	    grub_ieee1275_close(ihandle);
+	    return;
+	}
+
+	buf = grub_malloc (grub_strlen (alias->path) + 32 + 32);
+
+	if (!buf)
+	{
+	    grub_ieee1275_close(ihandle);
+	    return;
+	}
+
+	bufptr = grub_stpcpy (buf, alias->path);
+
+	/* For each WWPN discovered we need to find his associated LUNS
+	 * calling the fcp-luns method */
+	for (i=0; i< args_targets.nentries; i++)
+	{
+	    ptr_targets = *(grub_uint64_t **) (args_targets.table + 4 + 8 * i);
+	    while(*ptr_targets)
+	    {
+		args_luns.wwpn_l = (grub_ieee1275_cell_t) (*ptr_targets);
+		args_luns.wwpn_h = (grub_ieee1275_cell_t) (*ptr_targets >> 32);
+		pos=grub_snprintf (bufptr, 32, "/disk@%" PRIxGRUB_UINT64_T,
+						*ptr_targets++);
+
+		if (IEEE1275_CALL_ENTRY_FN (&args_luns) == -1)
+		{
+		    grub_dprintf("disk", "failed to get the LUNS while iterating FCP disk path=%s\n", buf);
+		    grub_ieee1275_close (ihandle);
+		    grub_free (buf);
+		    return;
+		}
+
+		for(j=0;j<args_luns.nentries; j++)
+		{
+		    ptr_luns = *(grub_uint64_t **) (args_luns.table + 4 + 8*j);
+
+		    do
+		    {
+			if (*ptr_luns == 0)
+			{
+			    dev_iterate_real(buf,buf);
+			    ptr_luns++;
+			    continue;
+			}
+			grub_snprintf (&bufptr[pos], 30, ",%" PRIxGRUB_UINT64_T,
+							*ptr_luns++);
+			dev_iterate_real(buf,buf);
+		    } while(*ptr_luns);
+		}
+	    }
+	}
+
+  grub_ieee1275_close (ihandle);
+  grub_free (buf);
+  return;
+
+  }
+  else if (grub_strcmp (alias->type, "vscsi") == 0)
     {
       static grub_ieee1275_ihandle_t ihandle;
       struct set_color_args
