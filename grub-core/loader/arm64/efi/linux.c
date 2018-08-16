@@ -86,7 +86,10 @@ grub_efi_linux_boot (void *kernel_address, grub_off_t offset,
 {
   handover_func hf;
 
+  grub_dprintf ("linux", "kernel_addr: %p handover_offset: %p params: %p\n",
+		kernel_address, (void *)(grub_efi_uintn_t)offset, kernel_params);
   hf = (handover_func)((char *)kernel_address + offset);
+  grub_dprintf ("linux", "handover_func() = %p\n", hf);
   hf (grub_efi_image_handle, grub_efi_system_table, kernel_params);
 
   return GRUB_ERR_BUG;
