@@ -1761,10 +1761,11 @@ module = {
 
 module = {
   name = linuxefi;
-  efi = loader/i386/efi/linux.c;
-  efi = lib/cmdline.c;
-  enable = i386_efi;
-  enable = x86_64_efi;
+  arm64 = loader/arm64/efi/linux.c;
+  x86_64 = loader/i386/efi/linux.c;
+  common = lib/cmdline.c;
+  enable = x86_64;
+  enable = arm64;
 };
 
 module = {
