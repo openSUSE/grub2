@@ -192,6 +192,8 @@ label_set_property (void *vself, const char *name, const char *value)
 	       "or `c' for a command-line.");
 	   else if (grub_strcmp (value, "@KEYMAP_SHORT@") == 0)
 	    value = _("enter: boot, `e': options, `c': cmd-line");
+	   else if (grub_strcmp (value, "@SUSE_KEYMAP_SCROLL_ENTRY@") == 0)
+	    value = _("ctrl+l: scroll entry left, ctrl+r: scroll entry right");
 	   /* FIXME: Add more templates here if needed.  */
 	  self->template = grub_strdup (value);
 	  self->text = grub_xasprintf (value, self->value);
