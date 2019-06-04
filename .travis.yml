@@ -96,7 +96,7 @@ matrix:
         - CROSS_TARGETS="ia64-linux"
     - name: "mips"
       env:
-        - GRUB_TARGETS="mips-arc mipsel-arc mipsel-qemu_mips mips-qemu_mips"
+        - GRUB_TARGETS="mips-arc mipsel-arc mipsel-qemu_mips-elf mips-qemu_mips-flash"
         - CROSS_TARGETS="mips64-linux"
     - name: "arm"
       env:
