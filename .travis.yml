@@ -112,10 +112,13 @@ matrix:
       env:
         - GRUB_TARGETS="ia64-efi"
         - CROSS_TARGETS="ia64-linux"
-    - name: "mips"
-      env:
-        - GRUB_TARGETS="mips-arc mipsel-arc mipsel-qemu_mips-elf mips-qemu_mips-flash"
-        - CROSS_TARGETS="mips64-linux"
+    # MIPS fails with the following error currently. If anyone cares about MIPS
+    # testing, please reenable it after resolving the problem:
+    #    configure: error: could not force big-endian
+    #- name: "mips"
+    #  env:
+    #    - GRUB_TARGETS="mips-arc mipsel-arc mipsel-qemu_mips-elf mips-qemu_mips-flash"
+    #    - CROSS_TARGETS="mips64-linux"
     - name: "arm"
       env:
         - GRUB_TARGETS="arm-coreboot-vexpress arm-efi arm-uboot"
