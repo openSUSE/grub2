@@ -68,7 +68,7 @@ script:
   - echo -e "insmod echo\\ninsmod reboot\\necho hello world\\nreboot" > grub.cfg
 
   # Assemble images and possibly run them.
-  - for target in $GRUB_TARGETS; do grub-mkimage -c grub.cfg -p / -O $target -o grub-$target echo reboot normal; done
+  - ( for target in $GRUB_TARGETS; do grub-mkimage -c grub.cfg -p / -O $target -o grub-$target echo reboot normal || exit; done )
 
   # Run images we know how to run.
   - if [[ "$GRUB_TARGETS" == *"x86_64-efi"* ]]; then qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -m 512 -no-reboot -nographic -net nic -net user,tftp=.,bootfile=grub-x86_64-efi | tee grub.log && grep "hello world" grub.log; fi
@@ -100,7 +100,7 @@ matrix:
         - CROSS_TARGETS="mips64-linux"
     - name: "arm"
       env:
-        - GRUB_TARGETS="arm-coreboot arm-efi arm-uboot"
+        - GRUB_TARGETS="arm-coreboot-vexpress arm-efi arm-uboot"
         - CROSS_TARGETS="arm-linux-gnueabi"
     - name: "arm64"
       env:
