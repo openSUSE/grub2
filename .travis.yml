@@ -108,6 +108,11 @@ matrix:
       env:
         - GRUB_TARGETS="arm-coreboot-vexpress arm-efi arm-uboot"
         - CROSS_TARGETS="arm-linux-gnueabi"
+    - name: "arm_thumb"
+      env:
+        - GRUB_TARGETS="arm-coreboot-vexpress arm-efi arm-uboot"
+        - CROSS_TARGETS="arm-linux-gnueabi"
+        - TARGET_CFLAGS="-mthumb -march=armv7-a"
     - name: "arm64"
       env:
         - GRUB_TARGETS="arm64-efi"
