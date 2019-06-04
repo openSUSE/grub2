@@ -69,15 +69,27 @@ script:
     done
 
   # Our test canary.
-  - echo -e "insmod echo\\ninsmod reboot\\necho hello world\\nreboot" > grub.cfg
+  - echo -e "insmod echo\\ninsmod reboot\\necho hello world\\nreboot" > /tmp/grub/lib/grub/grub.cfg
 
   # Assemble images and possibly run them.
-  - ( for target in $GRUB_TARGETS; do grub-mkimage -c grub.cfg -p / -O $target -o grub-$target echo reboot normal || exit; done )
+  - ( for target in $GRUB_TARGETS; do
+        pushd /tmp/grub/lib/grub/;
+        if [ -f $target/efinet.mod ]; then
+          EXTMODULES="efinet";
+        else
+          EXTMODULES="";
+        fi;
+        grub-mkimage -p / -O $target -o grub-$target normal tftp $EXTMODULES || exit;
+        popd;
+      done )
 
   # Run images we know how to run.
-  - if [[ "$GRUB_TARGETS" == *"x86_64-efi"* ]]; then qemu-system-x86_64                          -bios /usr/share/ovmf/OVMF.fd -m 512 -no-reboot -nographic -net nic -net user,tftp=.,bootfile=grub-x86_64-efi | tee grub.log && grep "hello world" grub.log; fi
-  - if [[ "$GRUB_TARGETS" == *"arm64-efi"* ]];  then qemu-system-aarch64 -M virt -cpu cortex-a57 -bios QEMU_EFI.aarch64.fd     -m 512 -no-reboot -nographic -net nic -net user,tftp=.,bootfile=grub-arm64-efi  | tee grub.log && grep "hello world" grub.log; fi
-  - if [[ "$GRUB_TARGETS" == *"arm-efi"* ]];    then qemu-system-arm     -M virt -cpu cortex-a15 -bios QEMU_EFI.arm.fd         -m 512 -no-reboot -nographic -net nic -net user,tftp=.,bootfile=grub-arm-efi    | tee grub.log && grep "hello world" grub.log; fi
+  - if [[ "$GRUB_TARGETS" == *"x86_64-efi"* ]]; then qemu-system-x86_64                          -bios /usr/share/ovmf/OVMF.fd
+                         -m 512 -no-reboot -nographic -net none -netdev user,id=nd,tftp=/tmp/grub/lib/grub/,bootfile=grub-x86_64-efi -device virtio-net-pci,netdev=nd,romfile="" | tee grub.log && grep "hello world" grub.log; fi
+  - if [[ "$GRUB_TARGETS" == *"arm64-efi"* ]];  then qemu-system-aarch64 -M virt -cpu cortex-a57 -bios QEMU_EFI.aarch64.fd
+                         -m 512 -no-reboot -nographic -net none -netdev user,id=nd,tftp=/tmp/grub/lib/grub/,bootfile=grub-arm64-efi  -device virtio-net-pci,netdev=nd,romfile="" | tee grub.log && grep "hello world" grub.log; fi
+  - if [[ "$GRUB_TARGETS" == *"arm-efi"* ]];    then qemu-system-arm     -M virt -cpu cortex-a15 -bios QEMU_EFI.arm.fd
+                         -m 512 -no-reboot -nographic -net none -netdev user,id=nd,tftp=/tmp/grub/lib/grub/,bootfile=grub-arm-efi    -device virtio-net-pci,netdev=nd,romfile="" | tee grub.log && grep "hello world" grub.log; fi
 
 matrix:
   include:
