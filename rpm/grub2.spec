@@ -58,6 +58,11 @@ BuildRequires:  openssl >= 0.9.8
 BuildRequires:  pesign-obs-integration
 %endif
 %endif
+%if 0%{?suse_version} >= 1210
+# Package systemd services files grub2-once.service
+BuildRequires:  systemd-rpm-macros
+%define has_systemd 1
+%endif
 %if 0%{?suse_version} > 1320
 BuildRequires:  update-bootloader-rpm-macros
 %endif
@@ -151,6 +156,7 @@ Source10:       openSUSE-UEFI-CA-Certificate.crt
 Source11:       SLES-UEFI-CA-Certificate.crt
 Source12:       grub2-snapper-plugin.sh
 Source14:       80_suse_btrfs_snapshot
+Source15:       grub2-once.service
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
@@ -559,6 +565,9 @@ install -m 644 -D %{SOURCE2} %{buildroot}/%{_sysconfdir}/default/grub
 install -m 755 -D %{SOURCE6} %{buildroot}/%{_sbindir}/grub2-once
 install -m 755 -D %{SOURCE12} %{buildroot}/%{_libdir}/snapper/plugins/grub
 install -m 755 -D %{SOURCE14} %{buildroot}/%{_sysconfdir}/grub.d/80_suse_btrfs_snapshot
+%if 0%{?has_systemd:1}
+install -m 644 -D %{SOURCE15} %{buildroot}/%{_unitdir}/grub2-once.service
+%endif
 
 R="%{buildroot}"
 %ifarch %{ix86} x86_64
@@ -572,8 +581,10 @@ rm -f $R%{_sysconfdir}/grub.d/20_memtest86+
 %fdupes %buildroot%{_datadir}
 
 %pre
+%service_add_pre grub2-once.service
 
 %post
+%service_add_post grub2-once.service
 /sbin/install-info %{_infodir}/grub-dev.info %{_infodir}/dir || :
 /sbin/install-info %{_infodir}/%{name}.info %{_infodir}/dir || :
 
@@ -673,6 +684,7 @@ exit 0
 %endif
 
 %preun
+%service_del_preun grub2-once.service
 if [ $1 = 0 ]; then
   /sbin/install-info --delete %{_infodir}/grub-dev.info %{_infodir}/dir || :
   /sbin/install-info --delete %{_infodir}/%{name}.info %{_infodir}/dir || :
@@ -712,6 +724,7 @@ if [ $1 = 0 ]; then
 fi
 
 %postun
+%service_del_postun grub2-once.service
 
 %files -f %{name}.lang
 %defattr(-,root,root,-)
@@ -763,6 +776,9 @@ fi
 %{_bindir}/%{name}-render-label
 %{_bindir}/%{name}-script-check
 %{_bindir}/%{name}-syslinux2cfg
+%if 0%{?has_systemd:1}
+%{_unitdir}/grub2-once.service
+%endif
 %dir %{_datadir}/%{name}
 %dir %{_datadir}/%{name}/themes
 %if 0%{?suse_version} >= 1140
