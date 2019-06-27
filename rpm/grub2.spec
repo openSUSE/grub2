@@ -137,6 +137,7 @@ Source4:        grub2.rpmlintrc
 # rsync -Lrtvz  translationproject.org::tp/latest/grub/ po
 Source5:        translations-20170427.tar.xz
 Source6:        grub2-once
+Source7:        20_memtest86+
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
@@ -431,6 +432,9 @@ find %{buildroot}/%{_datadir}/%{name} \
 # Script that makes part of grub.cfg persist across updates
 install -m 755 %{SOURCE1} %{buildroot}/%{_sysconfdir}/grub.d/
 
+# Script to generate memtest86+ menu entry
+install -m 755 %{SOURCE7} %{buildroot}/%{_sysconfdir}/grub.d/
+
 # Ghost config file
 install -d %{buildroot}/boot/%{name}
 touch %{buildroot}/boot/%{name}/grub.cfg
@@ -444,6 +448,12 @@ rm %{buildroot}/%{_datadir}/%{name}/*.h
 # Defaults
 install -m 644 -D %{SOURCE2} %{buildroot}/%{_sysconfdir}/default/grub
 install -m 755 -D %{SOURCE6} %{buildroot}/%{_sbindir}/grub2-once
+
+R="%{buildroot}"
+%ifarch %{ix86} x86_64
+%else
+rm -f $R%{_sysconfdir}/grub.d/20_memtest86+
+%endif
 
 %find_lang %{name}
 %fdupes %buildroot%{_bindir}
@@ -614,6 +624,9 @@ fi
 %config(noreplace) %{_sysconfdir}/grub.d/40_custom
 %config(noreplace) %{_sysconfdir}/grub.d/41_custom
 %config(noreplace) %{_sysconfdir}/grub.d/90_persistent
+%ifarch %{ix86} x86_64
+%config(noreplace) %{_sysconfdir}/grub.d/20_memtest86+
+%endif
 %{_sbindir}/%{name}-install
 %{_sbindir}/%{name}-mkconfig
 %{_sbindir}/%{name}-once
