@@ -149,6 +149,8 @@ Source7:        20_memtest86+
 Source8:        README.ibm3215
 Source10:       openSUSE-UEFI-CA-Certificate.crt
 Source11:       SLES-UEFI-CA-Certificate.crt
+Source12:       grub2-snapper-plugin.sh
+Source14:       80_suse_btrfs_snapshot
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
@@ -275,6 +277,18 @@ file systems, computer architectures and hardware devices.  This subpackage
 provides support for XEN systems.
 
 %endif
+
+%package snapper-plugin
+
+Summary:        Grub2's snapper plugin
+Group:          System/Fhs
+Requires:       %{name} = %{version}
+Requires:       libxml2-tools
+Supplements:    packageand(snapper:grub2)
+BuildArch:      noarch
+
+%description snapper-plugin
+Grub2's snapper plugin for advanced btrfs snapshot boot menu management
 
 %prep
 # We create (if we build for efi) two copies of the sources in the Builddir
@@ -543,6 +557,8 @@ rm %{buildroot}/%{_datadir}/%{name}/*.h
 # Defaults
 install -m 644 -D %{SOURCE2} %{buildroot}/%{_sysconfdir}/default/grub
 install -m 755 -D %{SOURCE6} %{buildroot}/%{_sbindir}/grub2-once
+install -m 755 -D %{SOURCE12} %{buildroot}/%{_libdir}/snapper/plugins/grub
+install -m 755 -D %{SOURCE14} %{buildroot}/%{_sysconfdir}/grub.d/80_suse_btrfs_snapshot
 
 R="%{buildroot}"
 %ifarch %{ix86} x86_64
@@ -859,6 +875,13 @@ fi
 %endif
 %endif
 %endif
+
+%files snapper-plugin
+%defattr(-,root,root,-)
+%dir %{_libdir}/snapper
+%dir %{_libdir}/snapper/plugins
+%config(noreplace) %{_sysconfdir}/grub.d/80_suse_btrfs_snapshot
+%{_libdir}/snapper/plugins/grub
 
 %ifarch %{ix86} x86_64
 %files %{grubxenarch}
