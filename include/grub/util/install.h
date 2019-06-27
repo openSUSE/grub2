@@ -105,6 +105,7 @@ enum grub_install_plat
     GRUB_INSTALL_PLATFORM_ARM_COREBOOT,
     GRUB_INSTALL_PLATFORM_RISCV32_EFI,
     GRUB_INSTALL_PLATFORM_RISCV64_EFI,
+    GRUB_INSTALL_PLATFORM_S390X_EMU,
     GRUB_INSTALL_PLATFORM_MAX
   };
 
@@ -228,6 +229,9 @@ grub_install_register_ieee1275 (int is_prep, const char *install_device,
 void
 grub_install_sgi_setup (const char *install_device,
 			const char *imgfile, const char *destname);
+
+void
+grub_install_zipl (const char *d, int i, int f);
 
 int 
 grub_install_compress_gzip (const char *src, const char *dest);
