@@ -158,6 +158,8 @@ Source12:       grub2-snapper-plugin.sh
 Source14:       80_suse_btrfs_snapshot
 Source15:       grub2-once.service
 Source16:       grub2-xen-pv-firmware.cfg
+# required hook for systemd-sleep (bsc#941758)
+Source17:       grub2-systemd-sleep.sh
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
@@ -296,6 +298,21 @@ BuildArch:      noarch
 
 %description snapper-plugin
 Grub2's snapper plugin for advanced btrfs snapshot boot menu management
+
+%if 0%{?has_systemd:1}
+%package systemd-sleep-plugin
+
+Summary:        Grub2's systemd-sleep plugin
+Group:          System/Fhs
+Requires:       grub2
+Requires:       util-linux
+Supplements:    packageand(systemd:grub2)
+BuildArch:      noarch
+
+%description systemd-sleep-plugin
+Grub2's systemd-sleep plugin for directly booting hibernated kernel image in
+swap partition while in resuming
+%endif
 
 %prep
 # We create (if we build for efi) two copies of the sources in the Builddir
@@ -579,6 +596,7 @@ install -m 755 -D %{SOURCE12} %{buildroot}/%{_libdir}/snapper/plugins/grub
 install -m 755 -D %{SOURCE14} %{buildroot}/%{_sysconfdir}/grub.d/80_suse_btrfs_snapshot
 %if 0%{?has_systemd:1}
 install -m 644 -D %{SOURCE15} %{buildroot}/%{_unitdir}/grub2-once.service
+install -m 755 -D %{SOURCE17} %{buildroot}/%{_libdir}/systemd/system-sleep/grub2.sleep
 %endif
 
 R="%{buildroot}"
@@ -919,6 +937,13 @@ fi
 # provide compatibility sym-link for VM definitions pointing to old location
 %dir %{_libdir}/%{name}
 %{_libdir}/%{name}/%{grubxenarch}
+%endif
+
+%if 0%{?has_systemd:1}
+%files systemd-sleep-plugin
+%defattr(-,root,root,-)
+%dir %{_libdir}/systemd/system-sleep
+%{_libdir}/systemd/system-sleep/grub2.sleep
 %endif
 
 %changelog
