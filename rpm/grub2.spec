@@ -136,6 +136,7 @@ Source2:        grub.default
 Source4:        grub2.rpmlintrc
 # rsync -Lrtvz  translationproject.org::tp/latest/grub/ po
 Source5:        translations-20170427.tar.xz
+Source6:        grub2-once
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
@@ -442,6 +443,7 @@ rm %{buildroot}/%{_datadir}/%{name}/*.h
 
 # Defaults
 install -m 644 -D %{SOURCE2} %{buildroot}/%{_sysconfdir}/default/grub
+install -m 755 -D %{SOURCE6} %{buildroot}/%{_sbindir}/grub2-once
 
 %find_lang %{name}
 %fdupes %buildroot%{_bindir}
@@ -614,6 +616,7 @@ fi
 %config(noreplace) %{_sysconfdir}/grub.d/90_persistent
 %{_sbindir}/%{name}-install
 %{_sbindir}/%{name}-mkconfig
+%{_sbindir}/%{name}-once
 %{_sbindir}/%{name}-probe
 %{_sbindir}/%{name}-reboot
 %{_sbindir}/%{name}-set-default
