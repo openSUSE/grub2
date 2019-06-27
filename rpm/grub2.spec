@@ -85,6 +85,11 @@ BuildRequires:  update-bootloader-rpm-macros
 %define platform pc
 %endif
 
+%ifarch s390x
+%define grubcpu s390x
+%define platform emu
+%endif
+
 %ifarch %{arm}
 %define grubcpu arm
 %define platform uboot
@@ -165,7 +170,9 @@ Source1000:     PATCH_POLICY
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
+%ifnarch s390x
 Recommends:     os-prober
+%endif
 # xorriso not available using grub2-mkrescue (bnc#812681)
 # downgrade to suggest as minimal system can't afford pulling in tcl/tk and half of the x11 stack (bsc#1102515)
 Suggests:       libburnia-tools
@@ -176,6 +183,14 @@ Requires(preun):/sbin/install-info
 %if ! 0%{?only_efi:1}
 Requires:       grub2-%{grubarch} = %{version}-%{release}
 %endif
+%ifarch s390x
+# required utilities by grub2-s390x-04-grub2-install.patch
+# use 'showconsole' to determine console device. (bnc#876743)
+Requires:       /sbin/showconsole
+Requires:       kexec-tools
+# for /sbin/zipl used by grub2-zipl-setup
+Requires:       s390-tools
+%endif
 %ifarch ppc64 ppc64le
 Requires:       powerpc-utils
 %endif
@@ -185,7 +200,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?only_x86_64:1}
 ExclusiveArch:  x86_64
 %else
-ExclusiveArch:  %{ix86} x86_64 ppc ppc64 ppc64le aarch64 %{arm}
+ExclusiveArch:  %{ix86} x86_64 ppc ppc64 ppc64le s390x aarch64 %{arm}
 %endif
 
 %description
@@ -613,6 +628,39 @@ rm -f $R%{_sysconfdir}/grub.d/20_memtest86+
 rm -f $R%{_sysconfdir}/grub.d/20_ppc_terminfo
 %endif
 
+%ifarch s390x
+mv $R%{_sysconfdir}/{grub.d,default}/zipl2grub.conf.in
+chmod 600 $R%{_sysconfdir}/default/zipl2grub.conf.in
+
+%define dracutlibdir %{_prefix}/lib/dracut
+%define dracutgrubmoddir %{dracutlibdir}/modules.d/99grub2
+install -m 755 -d $R%{dracutgrubmoddir}
+for f in module-setup.sh grub2.sh; do
+  mv $R%{_datadir}/%{name}/%{grubarch}/dracut-$f $R%{dracutgrubmoddir}/$f
+done
+mv $R%{_datadir}/%{name}/%{grubarch}/dracut-zipl-refresh \
+   $R%{_datadir}/%{name}/zipl-refresh
+rm -f $R%{_sysconfdir}/grub.d/30_os-prober
+
+perl -ni -e '
+  sub END() {
+    print "\n# on s390x always:\nGRUB_DISABLE_OS_PROBER=true\n";
+  }
+  if ( s{^#?(GRUB_TERMINAL)=(console|gfxterm)}{$1=console} ) {
+    $_ .= "GRUB_GFXPAYLOAD_LINUX=text\n";
+  }
+  if (	m{^# The resolution used on graphical} ||
+	m{^# # note that you can use only modes} ||
+	m{^# you can see them in real GRUB} ||
+	m{^#?GRUB_GFXMODE=} ) {
+    next;
+  }
+  s{openSUSE}{SUSE Linux Enterprise Server} if (m{^GRUB_DISTRIBUTOR});
+  print;
+'  %{buildroot}/%{_sysconfdir}/default/grub
+%else
+%endif
+
 %find_lang %{name}
 %fdupes %buildroot%{_bindir}
 %fdupes %buildroot%{_libdir}
@@ -796,6 +844,12 @@ fi
 %ifarch ppc ppc64 ppc64le
 %config(noreplace) %{_sysconfdir}/grub.d/20_ppc_terminfo
 %endif
+%ifarch s390x
+%config(noreplace) %{_sysconfdir}/default/zipl2grub.conf.in
+%{dracutlibdir}
+%{_sbindir}/%{name}-zipl-setup
+%{_datadir}/%{name}/zipl-refresh
+%endif
 %{_sbindir}/%{name}-install
 %{_sbindir}/%{name}-mkconfig
 %{_sbindir}/%{name}-once
@@ -855,6 +909,7 @@ fi
 %{_bindir}/%{name}-emu
 %{_mandir}/man1/%{name}-emu.1.*
 %endif
+%ifnarch s390x
 %config(noreplace) %{_sysconfdir}/grub.d/30_os-prober
 %{_bindir}/%{name}-glue-efi
 %{_bindir}/%{name}-mount
@@ -868,6 +923,7 @@ fi
 %{_mandir}/man8/%{name}-macbless.8.*
 %{_mandir}/man8/%{name}-ofpathname.8.*
 %{_mandir}/man8/%{name}-sparc64-setup.8.*
+%endif
 
 %files branding-upstream
 %defattr(-,root,root,-)
@@ -883,7 +939,7 @@ fi
 %{_datadir}/%{name}/%{grubarch}/grub.chrp
 %{_datadir}/%{name}/%{grubarch}/bootinfo.txt
 %endif
-%ifnarch ppc ppc64 ppc64le %{arm}
+%ifnarch ppc ppc64 ppc64le s390x %{arm}
 %{_datadir}/%{name}/%{grubarch}/*.image
 %endif
 %{_datadir}/%{name}/%{grubarch}/*.img
