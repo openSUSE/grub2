@@ -131,6 +131,7 @@ License:        GPL-3.0-or-later
 Group:          System/Boot
 Url:            http://www.gnu.org/software/grub/
 Source0:        %{name}-%{version}.tar.xz
+Source1:        90_persistent
 Source4:        grub2.rpmlintrc
 # rsync -Lrtvz  translationproject.org::tp/latest/grub/ po
 Source5:        translations-20170427.tar.xz
@@ -425,6 +426,9 @@ find %{buildroot}/%{_datadir}/%{name} \
        \( -name '*.module' -o -name '*.image' -o -name '*.exec' \) -print0 | \
        xargs --no-run-if-empty -0 chmod a-x
 
+# Script that makes part of grub.cfg persist across updates
+install -m 755 %{SOURCE1} %{buildroot}/%{_sysconfdir}/grub.d/
+
 # Ghost config file
 install -d %{buildroot}/boot/%{name}
 touch %{buildroot}/boot/%{name}/grub.cfg
@@ -602,6 +606,7 @@ fi
 %config(noreplace) %{_sysconfdir}/grub.d/20_linux_xen
 %config(noreplace) %{_sysconfdir}/grub.d/40_custom
 %config(noreplace) %{_sysconfdir}/grub.d/41_custom
+%config(noreplace) %{_sysconfdir}/grub.d/90_persistent
 %{_sbindir}/%{name}-install
 %{_sbindir}/%{name}-mkconfig
 %{_sbindir}/%{name}-probe
