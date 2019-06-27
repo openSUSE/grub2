@@ -160,6 +160,7 @@ Source15:       grub2-once.service
 Source16:       grub2-xen-pv-firmware.cfg
 # required hook for systemd-sleep (bsc#941758)
 Source17:       grub2-systemd-sleep.sh
+Source18:       grub2-check-default.sh
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
@@ -598,6 +599,7 @@ install -m 755 -D %{SOURCE14} %{buildroot}/%{_sysconfdir}/grub.d/80_suse_btrfs_s
 install -m 644 -D %{SOURCE15} %{buildroot}/%{_unitdir}/grub2-once.service
 install -m 755 -D %{SOURCE17} %{buildroot}/%{_libdir}/systemd/system-sleep/grub2.sleep
 %endif
+install -m 755 -D %{SOURCE18} %{buildroot}/%{_sbindir}/grub2-check-default
 
 R="%{buildroot}"
 %ifarch %{ix86} x86_64
@@ -790,6 +792,7 @@ fi
 %{_sbindir}/%{name}-probe
 %{_sbindir}/%{name}-reboot
 %{_sbindir}/%{name}-set-default
+%{_sbindir}/%{name}-check-default
 %{_bindir}/%{name}-editenv
 %{_bindir}/%{name}-file
 %{_bindir}/%{name}-fstest
