@@ -157,6 +157,7 @@ Source11:       SLES-UEFI-CA-Certificate.crt
 Source12:       grub2-snapper-plugin.sh
 Source14:       80_suse_btrfs_snapshot
 Source15:       grub2-once.service
+Source16:       grub2-xen-pv-firmware.cfg
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
@@ -373,6 +374,8 @@ cd build-xen
         --program-transform-name=s,grub,%{name},
 make %{?_smp_mflags}
 
+./grub-mkstandalone --grub-mkimage=./grub-mkimage -o grub.xen -O %{grubxenarch} -d grub-core/ "/boot/grub/grub.cfg=%{SOURCE16}"
+
 cd ..
 %endif
 
@@ -475,6 +478,15 @@ cd ..
 %ifarch %{ix86} x86_64
 cd build-xen
 %make_install
+install -m 644 grub.xen %{buildroot}/%{_datadir}/%{name}/%{grubxenarch}/.
+# provide compatibility sym-link for VM definitions pointing to old location
+install -d %{buildroot}%{_libdir}/%{name}/%{grubxenarch}
+ln -srf %{buildroot}%{_datadir}/%{name}/%{grubxenarch}/grub.xen %{buildroot}%{_libdir}/%{name}/%{grubxenarch}/grub.xen
+cat <<-EoM >%{buildroot}%{_libdir}/%{name}/%{grubxenarch}/DEPRECATED
+	This directory and its contents was moved to %{_datadir}/%{name}/%{grubxenarch}.
+	Individual symbolic links are provided for a smooth transition.
+	Please update your VM definition files to use the new location!
+EoM
 cd ..
 %endif
 
@@ -904,6 +916,9 @@ fi
 %defattr(-,root,root,-)
 %dir %{_datadir}/%{name}/%{grubxenarch}
 %{_datadir}/%{name}/%{grubxenarch}/*
+# provide compatibility sym-link for VM definitions pointing to old location
+%dir %{_libdir}/%{name}
+%{_libdir}/%{name}/%{grubxenarch}
 %endif
 
 %changelog
