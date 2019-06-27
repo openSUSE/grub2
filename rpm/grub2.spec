@@ -14,6 +14,8 @@
 
 # Please submit bugfixes or comments via http://bugs.opensuse.org/
 #
+# needssslcertforbuild
+
 
 %define _binaries_in_noarch_package_terminate_build 0
 
@@ -50,6 +52,12 @@ BuildRequires:  %{pythons}
 BuildRequires:  python
 %endif
 BuildRequires:  xz-devel
+%ifarch x86_64 aarch64
+%if 0%{?suse_version} >= 1230 || 0%{?suse_version} == 1110
+BuildRequires:  openssl >= 0.9.8
+BuildRequires:  pesign-obs-integration
+%endif
+%endif
 %if 0%{?suse_version} > 1320
 BuildRequires:  update-bootloader-rpm-macros
 %endif
@@ -139,6 +147,8 @@ Source5:        translations-20170427.tar.xz
 Source6:        grub2-once
 Source7:        20_memtest86+
 Source8:        README.ibm3215
+Source10:       openSUSE-UEFI-CA-Certificate.crt
+Source11:       SLES-UEFI-CA-Certificate.crt
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
@@ -358,6 +368,57 @@ cd build-efi
         --program-transform-name=s,grub,%{name},
 make %{?_smp_mflags}
 
+#TODO: add efifwsetup module
+
+FS_MODULES="btrfs ext2 xfs jfs reiserfs"
+CD_MODULES=" all_video boot cat chain configfile echo true \
+		efinet font gfxmenu gfxterm gzio halt iso9660 \
+		jpeg minicmd normal part_apple part_msdos part_gpt \
+		password_pbkdf2 png reboot search search_fs_uuid \
+		search_fs_file search_label sleep test video fat loadenv"
+PXE_MODULES="efinet tftp http"
+CRYPTO_MODULES="luks gcry_rijndael gcry_sha1 gcry_sha256"
+
+%ifarch x86_64
+CD_MODULES="${CD_MODULES} shim_lock linuxefi"
+%else
+CD_MODULES="${CD_MODULES} linux"
+%endif
+
+GRUB_MODULES="${CD_MODULES} ${FS_MODULES} ${PXE_MODULES} ${CRYPTO_MODULES} mdraid09 mdraid1x lvm serial"
+./grub-mkimage -O %{grubefiarch} -o grub.efi --prefix= \
+		-d grub-core ${GRUB_MODULES}
+%ifarch x86_64
+./grub-mkimage -O %{grubefiarch} -o grub-tpm.efi --prefix= \
+		-d grub-core ${GRUB_MODULES} tpm
+%endif
+
+%ifarch x86_64 aarch64
+%if 0%{?suse_version} >= 1230 || 0%{?suse_version} == 1110
+if test -e %{_sourcedir}/_projectcert.crt ; then
+    prjsubject=$(openssl x509 -in %{_sourcedir}/_projectcert.crt -noout -subject_hash)
+    prjissuer=$(openssl x509 -in %{_sourcedir}/_projectcert.crt -noout -issuer_hash)
+    opensusesubject=$(openssl x509 -in %{SOURCE10} -noout -subject_hash)
+    slessubject=$(openssl x509 -in %{SOURCE11} -noout -subject_hash)
+    if test "$prjissuer" = "$opensusesubject" ; then
+        cert=%{SOURCE10}
+    fi
+    if test "$prjissuer" = "$slessubject" ; then
+        cert=%{SOURCE11}
+    fi
+    if test "$prjsubject" = "$prjissuer" ; then
+        cert=%{_sourcedir}/_projectcert.crt
+    fi
+fi
+if test -z "$cert" ; then
+    echo "cannot identify project, assuming openSUSE signing"
+    cert=%{SOURCE10}
+fi
+
+openssl x509 -in $cert -outform DER -out grub.der
+%endif
+%endif
+
 cd ..
 %endif
 
@@ -400,6 +461,38 @@ cd ..
 %ifarch %{efi}
 cd build-efi
 %make_install
+install -m 644 grub.efi %{buildroot}/%{_datadir}/%{name}/%{grubefiarch}/.
+%ifarch x86_64
+install -m 644 grub-tpm.efi %{buildroot}/%{_datadir}/%{name}/%{grubefiarch}/.
+%endif
+
+# Create grub.efi link to system efi directory
+# This is for tools like kiwi not fiddling with the path
+%define sysefibasedir %{_datadir}/efi
+%define sysefidir %{sysefibasedir}/%{_target_cpu}
+install -d %{buildroot}/%{sysefidir}
+ln -sr %{buildroot}/%{_datadir}/%{name}/%{grubefiarch}/grub.efi %{buildroot}%{sysefidir}/grub.efi
+%ifarch x86_64
+# provide compatibility sym-link for previous shim-install and the like
+install -d %{buildroot}/usr/lib64/efi
+ln -srf %{buildroot}/%{_datadir}/%{name}/%{grubefiarch}/grub.efi %{buildroot}/usr/lib64/efi/grub.efi
+cat <<-EoM >%{buildroot}/usr/lib64/efi/DEPRECATED
+	This directory and its contents was moved to %{_datadir}/efi/x86_64.
+	Individual symbolic links are provided for a smooth transition and
+	may vanish at any point in time.  Please use the new location!
+EoM
+%endif
+
+%ifarch x86_64 aarch64
+%if 0%{?suse_version} >= 1230 || 0%{?suse_version} == 1110
+export BRP_PESIGN_FILES="%{_datadir}/%{name}/%{grubefiarch}/grub.efi"
+%ifarch x86_64
+BRP_PESIGN_FILES="${BRP_PESIGN_FILES} %{_datadir}/%{name}/%{grubefiarch}/grub-tpm.efi"
+%endif
+install -m 444 grub.der %{buildroot}/%{sysefidir}/
+%endif
+%endif
+
 cd ..
 %endif
 
@@ -736,6 +829,10 @@ fi
 %files %{grubefiarch}
 %defattr(-,root,root,-)
 %dir %{_datadir}/%{name}/%{grubefiarch}
+%{_datadir}/%{name}/%{grubefiarch}/grub.efi
+%ifarch x86_64
+%{_datadir}/%{name}/%{grubefiarch}/grub-tpm.efi
+%endif
 %{_datadir}/%{name}/%{grubefiarch}/*.img
 %{_datadir}/%{name}/%{grubefiarch}/*.lst
 %{_datadir}/%{name}/%{grubefiarch}/*.mod
@@ -744,9 +841,23 @@ fi
 %{_datadir}/%{name}/%{grubefiarch}/gmodule.pl
 %{_datadir}/%{name}/%{grubefiarch}/kernel.exec
 %{_datadir}/%{name}/%{grubefiarch}/modinfo.sh
+%dir %{sysefibasedir}
+%dir %{sysefidir}
+%{sysefidir}/grub.efi
 %if 0%{?suse_version} < 1600
+%ifarch x86_64
+# provide compatibility sym-link for previous shim-install and kiwi
+%dir /usr/lib64/efi
+/usr/lib64/efi/DEPRECATED
+/usr/lib64/efi/grub.efi
+%endif
 %endif
 
+%ifarch x86_64 aarch64
+%if 0%{?suse_version} >= 1230 || 0%{?suse_version} == 1110
+%{sysefidir}/grub.der
+%endif
+%endif
 %endif
 
 %ifarch %{ix86} x86_64
