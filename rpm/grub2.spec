@@ -161,6 +161,7 @@ Source16:       grub2-xen-pv-firmware.cfg
 # required hook for systemd-sleep (bsc#941758)
 Source17:       grub2-systemd-sleep.sh
 Source18:       grub2-check-default.sh
+Source1000:     PATCH_POLICY
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
