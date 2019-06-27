@@ -784,6 +784,7 @@ fi
 %config(noreplace) %{_sysconfdir}/grub.d/40_custom
 %config(noreplace) %{_sysconfdir}/grub.d/41_custom
 %config(noreplace) %{_sysconfdir}/grub.d/90_persistent
+%config(noreplace) %{_sysconfdir}/grub.d/95_textmode
 %ifarch %{ix86} x86_64
 %config(noreplace) %{_sysconfdir}/grub.d/20_memtest86+
 %endif
