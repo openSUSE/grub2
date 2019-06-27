@@ -138,6 +138,7 @@ Source4:        grub2.rpmlintrc
 Source5:        translations-20170427.tar.xz
 Source6:        grub2-once
 Source7:        20_memtest86+
+Source8:        README.ibm3215
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
@@ -278,6 +279,7 @@ ulimit -a
 # ... and make sure new catalogs are actually created
 rm -f po/stamp-po
 
+cp %{SOURCE8} .
 mkdir build
 %ifarch %{efi}
 mkdir build-efi
@@ -612,6 +614,9 @@ fi
 %doc NEWS README
 %doc THANKS TODO
 %doc docs/autoiso.cfg docs/osdetect.cfg
+%ifarch s390x
+%doc README.ibm3215
+%endif
 %dir /boot/%{name}
 %ghost /boot/%{name}/grub.cfg
 %{_sysconfdir}/bash_completion.d/grub
