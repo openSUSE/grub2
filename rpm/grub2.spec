@@ -132,6 +132,7 @@ Group:          System/Boot
 Url:            http://www.gnu.org/software/grub/
 Source0:        %{name}-%{version}.tar.xz
 Source1:        90_persistent
+Source2:        grub.default
 Source4:        grub2.rpmlintrc
 # rsync -Lrtvz  translationproject.org::tp/latest/grub/ po
 Source5:        translations-20170427.tar.xz
@@ -439,6 +440,9 @@ rm %{buildroot}/%{_datadir}/%{name}/*/*.h
 rm %{buildroot}/%{_datadir}/%{name}/*.h
 %endif
 
+# Defaults
+install -m 644 -D %{SOURCE2} %{buildroot}/%{_sysconfdir}/default/grub
+
 %find_lang %{name}
 %fdupes %buildroot%{_bindir}
 %fdupes %buildroot%{_libdir}
@@ -599,6 +603,7 @@ fi
 %dir /boot/%{name}
 %ghost /boot/%{name}/grub.cfg
 %{_sysconfdir}/bash_completion.d/grub
+%config(noreplace) %{_sysconfdir}/default/grub
 %dir %{_sysconfdir}/grub.d
 %{_sysconfdir}/grub.d/README
 %config(noreplace) %{_sysconfdir}/grub.d/00_header
