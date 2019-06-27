@@ -132,6 +132,8 @@ Group:          System/Boot
 Url:            http://www.gnu.org/software/grub/
 Source0:        grub-%{version}.tar.xz
 Source4:        grub2.rpmlintrc
+# rsync -Lrtvz  translationproject.org::tp/latest/grub/ po
+Source5:        translations-20170427.tar.xz
 
 Requires:       gettext-runtime
 %if 0%{?suse_version} >= 1140
@@ -261,11 +263,16 @@ provides support for XEN systems.
 
 %prep
 # We create (if we build for efi) two copies of the sources in the Builddir
-%setup -q -n grub-%{version}
+%setup -q -n grub-%{version} -a 5
 
 %build
 # collect evidence to debug spurious build failure on SLE15
 ulimit -a
+
+# Generate po/LINGUAS for message catalogs ...
+./linguas.sh
+# ... and make sure new catalogs are actually created
+rm -f po/stamp-po
 
 mkdir build
 %ifarch %{efi}
@@ -428,6 +435,7 @@ rm %{buildroot}/%{_datadir}/%{name}/*/*.h
 rm %{buildroot}/%{_datadir}/%{name}/*.h
 %endif
 
+%find_lang %{name}
 %fdupes %buildroot%{_bindir}
 %fdupes %buildroot%{_libdir}
 %fdupes %buildroot%{_datadir}
@@ -574,7 +582,7 @@ fi
 
 %postun
 
-%files
+%files -f %{name}.lang
 %defattr(-,root,root,-)
 %if 0%{?suse_version} < 1500
 %doc COPYING
