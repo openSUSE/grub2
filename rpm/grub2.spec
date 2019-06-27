@@ -608,6 +608,11 @@ R="%{buildroot}"
 rm -f $R%{_sysconfdir}/grub.d/20_memtest86+
 %endif
 
+%ifarch ppc ppc64 ppc64le
+%else
+rm -f $R%{_sysconfdir}/grub.d/20_ppc_terminfo
+%endif
+
 %find_lang %{name}
 %fdupes %buildroot%{_bindir}
 %fdupes %buildroot%{_libdir}
@@ -787,6 +792,9 @@ fi
 %config(noreplace) %{_sysconfdir}/grub.d/95_textmode
 %ifarch %{ix86} x86_64
 %config(noreplace) %{_sysconfdir}/grub.d/20_memtest86+
+%endif
+%ifarch ppc ppc64 ppc64le
+%config(noreplace) %{_sysconfdir}/grub.d/20_ppc_terminfo
 %endif
 %{_sbindir}/%{name}-install
 %{_sbindir}/%{name}-mkconfig
