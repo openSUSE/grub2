@@ -166,6 +166,7 @@ Source16:       grub2-xen-pv-firmware.cfg
 # required hook for systemd-sleep (bsc#941758)
 Source17:       grub2-systemd-sleep.sh
 Source18:       grub2-check-default.sh
+Source19:       http://git.savannah.gnu.org/cgit/gnulib.git/snapshot/gnulib-d271f868a8df9bbec29049d01e056481b7a1a263.tar.gz
 Source1000:     PATCH_POLICY
 
 Requires:       gettext-runtime
@@ -333,7 +334,7 @@ swap partition while in resuming
 
 %prep
 # We create (if we build for efi) two copies of the sources in the Builddir
-%setup -q -n grub-%{version} -a 5
+%setup -q -n grub-%{version} -a 5 -a 19
 
 %build
 # collect evidence to debug spurious build failure on SLE15
