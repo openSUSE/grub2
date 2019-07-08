@@ -44,14 +44,10 @@ static char *linux_cmdline;
 static grub_err_t
 grub_linuxefi_boot (void)
 {
-  int offset = 0;
-
-#ifdef __x86_64__
-  offset = 512;
-#endif
   asm volatile ("cli");
 
-  return grub_efi_linux_boot ((char *)kernel_mem, handover_offset + offset,
+  return grub_efi_linux_boot ((char *)kernel_mem,
+			      handover_offset,
 			      params);
 }
 
@@ -147,14 +143,20 @@ grub_cmd_initrd (grub_command_t cmd __attribute__ ((unused)),
   return grub_errno;
 }
 
+#define MIN(a, b) \
+  ({ typeof (a) _a = (a);  \
+     typeof (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
 static grub_err_t
 grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
 		int argc, char *argv[])
 {
   grub_file_t file = 0;
-  struct linux_i386_kernel_header lh;
-  grub_ssize_t len, start, filelen;
+  struct linux_i386_kernel_header *lh = NULL;
+  grub_ssize_t start, filelen;
   void *kernel = NULL;
+  int setup_header_end_offset;
   grub_err_t err;
 
   grub_dl_ref (my_mod);
@@ -185,45 +187,79 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
       goto fail;
     }
 
-  params = grub_efi_allocate_pages_max (0x3fffffff, BYTES_TO_PAGES(16384));
-
+  params = grub_efi_allocate_pages_max (0x3fffffff,
+					BYTES_TO_PAGES(sizeof(*params)));
   if (! params)
     {
       grub_error (GRUB_ERR_OUT_OF_MEMORY, "cannot allocate kernel parameters");
       goto fail;
     }
 
-  grub_memset (params, 0, 16384);
+  grub_dprintf ("linux", "params = %p\n", params);
 
-  grub_memcpy (&lh, kernel, sizeof (lh));
+  grub_memset (params, 0, sizeof(*params));
 
-  if (lh.boot_flag != grub_cpu_to_le16 (0xaa55))
+  setup_header_end_offset = *((grub_uint8_t *)kernel + 0x201);
+  grub_dprintf ("linux", "copying %lu bytes from %p to %p\n",
+		MIN((grub_size_t)0x202+setup_header_end_offset,
+		    sizeof (*params)) - 0x1f1,
+		(grub_uint8_t *)kernel + 0x1f1,
+		(grub_uint8_t *)params + 0x1f1);
+  grub_memcpy ((grub_uint8_t *)params + 0x1f1,
+	       (grub_uint8_t *)kernel + 0x1f1,
+		MIN((grub_size_t)0x202+setup_header_end_offset,sizeof (*params)) - 0x1f1);
+  lh = (struct linux_i386_kernel_header *)params;
+  grub_dprintf ("linux", "lh is at %p\n", lh);
+  grub_dprintf ("linux", "checking lh->boot_flag\n");
+  if (lh->boot_flag != grub_cpu_to_le16 (0xaa55))
     {
       grub_error (GRUB_ERR_BAD_OS, N_("invalid magic number"));
       goto fail;
     }
 
-  if (lh.setup_sects > GRUB_LINUX_MAX_SETUP_SECTS)
+  grub_dprintf ("linux", "checking lh->setup_sects\n");
+  if (lh->setup_sects > GRUB_LINUX_MAX_SETUP_SECTS)
     {
       grub_error (GRUB_ERR_BAD_OS, N_("too many setup sectors"));
       goto fail;
     }
 
-  if (lh.version < grub_cpu_to_le16 (0x020b))
+  grub_dprintf ("linux", "checking lh->version\n");
+  if (lh->version < grub_cpu_to_le16 (0x020b))
     {
       grub_error (GRUB_ERR_BAD_OS, N_("kernel too old"));
       goto fail;
     }
 
-  if (!lh.handover_offset)
+  grub_dprintf ("linux", "checking lh->handover_offset\n");
+  if (!lh->handover_offset)
     {
       grub_error (GRUB_ERR_BAD_OS, N_("kernel doesn't support EFI handover"));
       goto fail;
     }
 
-  linux_cmdline = grub_efi_allocate_pages_max(0x3fffffff,
-					 BYTES_TO_PAGES(lh.cmdline_size + 1));
+#if defined(__x86_64__) || defined(__aarch64__)
+  grub_dprintf ("linux", "checking lh->xloadflags\n");
+  if (!(lh->xloadflags & LINUX_XLF_KERNEL_64))
+    {
+      grub_error (GRUB_ERR_BAD_OS, N_("kernel doesn't support 64-bit CPUs"));
+      goto fail;
+    }
+#endif
 
+#if defined(__i386__)
+  if ((lh->xloadflags & LINUX_XLF_KERNEL_64) &&
+      !(lh->xloadflags & LINUX_XLF_EFI_HANDOVER_32))
+    {
+      grub_error (GRUB_ERR_BAD_OS,
+		  N_("kernel doesn't support 32-bit handover"));
+      goto fail;
+    }
+#endif
+
+  grub_dprintf ("linux", "setting up cmdline\n");
+  linux_cmdline = grub_efi_allocate_pages_max(0x3fffffff,
+					 BYTES_TO_PAGES(lh->cmdline_size + 1));
   if (!linux_cmdline)
     {
       grub_error (GRUB_ERR_OUT_OF_MEMORY, N_("can't allocate cmdline"));
@@ -233,27 +269,26 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
   grub_memcpy (linux_cmdline, LINUX_IMAGE, sizeof (LINUX_IMAGE));
   err = grub_create_loader_cmdline (argc, argv,
                               linux_cmdline + sizeof (LINUX_IMAGE) - 1,
-			      lh.cmdline_size - (sizeof (LINUX_IMAGE) - 1),
+			      lh->cmdline_size - (sizeof (LINUX_IMAGE) - 1),
 			      GRUB_VERIFY_KERNEL_CMDLINE);
   if (err)
     goto fail;
 
-  lh.cmd_line_ptr = (grub_uint32_t)(grub_addr_t)linux_cmdline;
+  grub_dprintf ("linux", "cmdline:%s\n", linux_cmdline);
+  grub_dprintf ("linux", "setting lh->cmd_line_ptr\n");
+  lh->cmd_line_ptr = (grub_uint32_t)(grub_addr_t)linux_cmdline;
 
-  handover_offset = lh.handover_offset;
+  grub_dprintf ("linux", "computing handover offset\n");
+  handover_offset = lh->handover_offset;
 
-  start = (lh.setup_sects + 1) * 512;
-  len = grub_file_size(file) - start;
+  start = (lh->setup_sects + 1) * 512;
 
-  kernel_mem = grub_efi_allocate_fixed (lh.pref_address,
-				       BYTES_TO_PAGES(lh.init_size));
+  kernel_mem = grub_efi_allocate_pages_max(lh->pref_address,
+					   BYTES_TO_PAGES(lh->init_size));
 
   if (!kernel_mem)
-    {
-      grub_errno = GRUB_ERR_NONE;
-      kernel_mem = grub_efi_allocate_pages_max(0x3fffffff,
-					     BYTES_TO_PAGES(lh.init_size));
-    }
+    kernel_mem = grub_efi_allocate_pages_max(0x3fffffff,
+					     BYTES_TO_PAGES(lh->init_size));
 
   if (!kernel_mem)
     {
@@ -261,21 +296,23 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
       goto fail;
     }
 
-  grub_memcpy (kernel_mem, (char *)kernel + start, len);
+  grub_dprintf ("linux", "kernel_mem = %lx\n", (unsigned long) kernel_mem);
+
   grub_loader_set (grub_linuxefi_boot, grub_linuxefi_unload, 0);
   loaded=1;
+  grub_dprintf ("linux", "setting lh->code32_start to %p\n", kernel_mem);
+  lh->code32_start = (grub_uint32_t)(grub_addr_t) kernel_mem;
 
-  lh.code32_start = (grub_uint32_t)(grub_uint64_t) kernel_mem;
-  /* Grub linuxefi erroneously initialize linux's boot_params with non-zero values. (bsc#1025563)
+  grub_memcpy (kernel_mem, (char *)kernel + start, filelen - start);
 
-     From https://www.kernel.org/doc/Documentation/x86/boot.txt:
-     The memory for struct boot_params could be allocated anywhere (even above 4G)
-     and initialized to all zero.
-     Then, the setup header at offset 0x01f1 of kernel image on should be
-     loaded into struct boot_params and examined. */
-  grub_memcpy (&params->setup_sects, &lh.setup_sects, sizeof (lh) - 0x01f1);
+  grub_dprintf ("linux", "setting lh->type_of_loader\n");
+  lh->type_of_loader = 0x6;
 
-  params->type_of_loader = 0x21;
+  grub_dprintf ("linux", "setting lh->ext_loader_{type,ver}\n");
+  params->ext_loader_type = 0;
+  params->ext_loader_ver = 2;
+  grub_dprintf("linux", "kernel_mem: %p handover_offset: %08x\n",
+	       kernel_mem, handover_offset);
 
  fail:
 
@@ -291,8 +328,10 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
       loaded = 0;
     }
 
-  if (linux_cmdline && !loaded)
-    grub_efi_free_pages((grub_efi_physical_address_t)(grub_addr_t)linux_cmdline, BYTES_TO_PAGES(lh.cmdline_size + 1));
+  if (linux_cmdline && lh && !loaded)
+    grub_efi_free_pages ((grub_efi_physical_address_t)(grub_addr_t)
+			 linux_cmdline,
+			 BYTES_TO_PAGES(lh->cmdline_size + 1));
 
   if (kernel_mem && !loaded)
     grub_efi_free_pages((grub_efi_physical_address_t)(grub_addr_t)kernel_mem, BYTES_TO_PAGES(kernel_size));
