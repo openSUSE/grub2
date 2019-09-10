@@ -530,7 +530,7 @@ SETUP (const char *dir,
         err = ctx.dest_partmap->embed (dest_dev->disk, &nsec, maxsec,
 				       GRUB_EMBED_PCBIOS, &sectors);
 #ifdef GRUB_SETUP_BIOS
-        if (err == GRUB_ERR_OUT_OF_RANGE
+        if ((err == GRUB_ERR_OUT_OF_RANGE || err == GRUB_ERR_FILE_NOT_FOUND)
             && dest_dev->disk->id == root_dev->disk->id
             && dest_dev->disk->dev->id == root_dev->disk->dev->id)
           {
