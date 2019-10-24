@@ -33,6 +33,14 @@
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
+struct cache_lv
+{
+  struct grub_diskfilter_lv *lv;
+  char *cache_pool;
+  char *origin;
+  struct cache_lv *next;
+};
+
 
 /* Go the string STR and return the number after STR.  *P will point
    at the number.  In case STR is not found, *P will be NULL and the
@@ -272,12 +280,7 @@ grub_lvm_detect (grub_disk_t disk,
 
   if (! vg)
     {
-      struct cache_lv {
-	struct grub_diskfilter_lv *lv;
-	char *cache_pool;
-	char *origin;
-	struct cache_lv *next;
-      } *cache_lvs = NULL;
+      struct cache_lv *cache_lvs = NULL;
 
       /* First time we see this volume group. We've to create the
 	 whole volume group structure. */
@@ -716,16 +719,21 @@ grub_lvm_detect (grub_disk_t disk,
 		      char *p2, *p3;
 		      grub_ssize_t sz;
 
-		      cache = grub_zalloc (sizeof (*cache));
-		      cache->lv = grub_zalloc (sizeof (*cache->lv));
+		      if (!(cache = grub_zalloc (sizeof (*cache))))
+			goto cache_lv_fail;
+		      if (!(cache->lv = grub_zalloc (sizeof (*cache->lv))))
+			goto cache_lv_fail;
 		      grub_memcpy (cache->lv, lv, sizeof (*cache->lv));
 
 		      if (lv->fullname)
-			cache->lv->fullname = grub_strdup (lv->fullname);
+			if (!(cache->lv->fullname = grub_strdup (lv->fullname)))
+			  goto cache_lv_fail;
 		      if (lv->idname)
-			cache->lv->idname = grub_strdup (lv->idname);
+			if (!(cache->lv->idname = grub_strdup (lv->idname)))
+			  goto cache_lv_fail;
 		      if (lv->name)
-			cache->lv->name = grub_strdup (lv->name);
+			if (!(cache->lv->name = grub_strdup (lv->name)))
+			  goto cache_lv_fail;
 
 		      skip_lv = 1;
 
@@ -741,7 +749,8 @@ grub_lvm_detect (grub_disk_t disk,
 
 		      sz = p3 - p2;
 
-		      cache->cache_pool = grub_malloc (sz + 1);
+		      if (!(cache->cache_pool = grub_malloc (sz + 1)))
+			goto cache_lv_fail;
 		      grub_memcpy (cache->cache_pool, p2, sz);
 		      cache->cache_pool[sz] = '\0';
 
@@ -757,7 +766,8 @@ grub_lvm_detect (grub_disk_t disk,
 
 		      sz = p3 - p2;
 
-		      cache->origin = grub_malloc (sz + 1);
+		      if (!(cache->origin = grub_malloc (sz + 1)))
+			goto cache_lv_fail;
 		      grub_memcpy (cache->origin, p2, sz);
 		      cache->origin[sz] = '\0';
 
@@ -865,21 +875,34 @@ grub_lvm_detect (grub_disk_t disk,
 	      }
 	    if (lv)
 	      {
-		cache->lv->segment_count = lv->segment_count;
-		cache->lv->segments = grub_malloc (lv->segment_count * sizeof (*lv->segments));
+		if (!(cache->lv->segments = grub_malloc (lv->segment_count * sizeof (*lv->segments))))
+		  continue;
 		grub_memcpy (cache->lv->segments, lv->segments, lv->segment_count * sizeof (*lv->segments));
 
 		for (i = 0; i < lv->segment_count; ++i)
 		  {
 		    struct grub_diskfilter_node *nodes = lv->segments[i].nodes;
 		    grub_size_t node_count = lv->segments[i].node_count;
-		    cache->lv->segments[i].nodes = grub_malloc (node_count * sizeof (*nodes));
+		    if (!(cache->lv->segments[i].nodes = grub_malloc (node_count * sizeof (*nodes))))
+		      {
+			int j;
+			for (j = 0; j < i; ++j)
+			  grub_free (cache->lv->segments[j].nodes);
+			grub_free (cache->lv->segments);
+			cache->lv->segments = NULL;
+			break;
+		      }
 		    grub_memcpy (cache->lv->segments[i].nodes, nodes, node_count * sizeof (*nodes));
 		  }
-		cache->lv->vg = vg;
-		cache->lv->next = vg->lvs;
-		vg->lvs = cache->lv;
-		cache->lv = NULL;
+
+		if (cache->lv->segments)
+		  {
+		    cache->lv->segment_count = lv->segment_count;
+		    cache->lv->vg = vg;
+		    cache->lv->next = vg->lvs;
+		    vg->lvs = cache->lv;
+		    cache->lv = NULL;
+		  }
 	      }
 	  }
 
@@ -890,7 +913,9 @@ grub_lvm_detect (grub_disk_t disk,
 	      if (cache->lv)
 		{
 		  for (i = 0; i < cache->lv->segment_count; ++i)
-		    grub_free (cache->lv->segments[i].nodes);
+		    if (cache->lv->segments)
+		      grub_free (cache->lv->segments[i].nodes);
+		  grub_free (cache->lv->segments);
 		  grub_free (cache->lv->fullname);
 		  grub_free (cache->lv->idname);
 		  grub_free (cache->lv->name);
