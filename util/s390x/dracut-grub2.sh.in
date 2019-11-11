@@ -27,7 +27,7 @@ if getargbool 0 initgrub && [ ! -e /grub2skip ] || [ -e /grub2force ]; then
   checksnap() {
     if [ -e /sysroot/.snapshots/grub-snapshot.cfg ]; then
       echo true
-    elif grep  -qE '^[^#\s]+\s+/.snapshots\s+' /sysroot/etc/fstab; then
+    elif grep  -qP '^[^#\s]+\s+/.snapshots\s+' /sysroot/etc/fstab; then
       echo false
     else
       echo true
@@ -93,8 +93,8 @@ if getargbool 0 initgrub && [ ! -e /grub2skip ] || [ -e /grub2force ]; then
     debug "Trying grub2-emu (ro=$grub2rofs, TERM=$TERM, ctty=$_ctty)..."
     setsid $CTTY -- chroot /sysroot $bindir/grub2-emu -X -X 0<>$_ctty 1>&0 2>&0
 
-    if [ -x /sysroot/usr/share/grub2/zipl-refresh ]; then
-	setsid $CTTY -- /sysroot/usr/share/grub2/zipl-refresh 0<>$_ctty 1>&0 2>&0
+    if [ -x /sysroot@libdir@/grub2/zipl-refresh ]; then
+	setsid $CTTY -- /sysroot@libdir@/grub2/zipl-refresh 0<>$_ctty 1>&0 2>&0
 	if [ $? != 0 ]; then
 	    warn "Not continuing"
 	    emergency_shell -n grub2-emu-zipl-refresh

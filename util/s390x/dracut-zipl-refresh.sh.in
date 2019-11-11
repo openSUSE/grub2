@@ -2,7 +2,7 @@
 # ex: ts=8 sw=4 sts=4 et filetype=sh syntax=off
 
 debug=false
-TIMEOUT=60
+TIMEOUT=300
 [ -n "$SYSROOT" ] ||
 SYSROOT=/sysroot
 [ -d $SYSROOT/boot ] || SYSROOT=
@@ -84,7 +84,7 @@ echo "
   to be made writable, then 'grub2-install --force' needs to be run,
   and, on success, a 'reboot' will be initiated.
 
-  Press 'c[Enter]' to interrupt... "
+  Press 'c[Enter]' to interrupt, any other input will proceed... "
 
 trap interrupted=1 INT
 interrupted=0
