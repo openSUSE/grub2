@@ -269,4 +269,16 @@ grub_util_get_target_name (const struct grub_install_image_target_desc *t);
 extern char *grub_install_copy_buffer;
 #define GRUB_INSTALL_COPY_BUFFER_SIZE 1048576
 
+struct fs_envblk_spec {
+  const char *fs_name;
+  int offset;
+  int size;
+};
+
+typedef struct fs_envblk_spec *fs_envblk_spec_t;
+extern struct fs_envblk_spec EXPORT_VAR(fs_envblk_spec)[];
+
+void
+grub_util_create_envblk_fs_area (const char *name, const char *fs, const char *dev);
+
 #endif

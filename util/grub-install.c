@@ -1303,10 +1303,6 @@ main (int argc, char *argv[])
   grub_install_copy_files (grub_install_source_directory,
 			   grubdir, platform);
 
-  char *envfile = grub_util_path_concat (2, grubdir, "grubenv");
-  if (!grub_util_is_regular (envfile))
-    grub_util_create_envblk_file (envfile);
-
   size_t ndev = 0;
 
   /* Write device to a variable so we don't have to traverse /dev every time.  */
@@ -1354,6 +1350,14 @@ main (int argc, char *argv[])
       if (dev->disk)
 	probe_mods (dev->disk);
       grub_device_close (dev);
+    }
+
+  char *envfile = grub_util_path_concat (2, grubdir, "grubenv");
+  if (!grub_util_is_regular (envfile))
+    {
+      grub_util_create_envblk_file (envfile);
+      if (!have_abstractions)
+	grub_util_create_envblk_fs_area (envfile, grub_fs->name, grub_devices[0]);
     }
 
   if (!config.is_cryptodisk_enabled && have_cryptodisk)

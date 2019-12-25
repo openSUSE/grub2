@@ -123,21 +123,11 @@ block, use `rm %s'."),
   NULL, help_filter, NULL
 };
 
-struct fs_envblk_spec {
-  const char *fs_name;
-  int offset;
-  int size;
-} fs_envblk_spec[] = {
-  { "btrfs", 256 * 1024, GRUB_DISK_SECTOR_SIZE },
-  { NULL, 0, 0 }
-};
-
 struct fs_envblk {
   struct fs_envblk_spec *spec;
   const char *dev;
 };
 
-typedef struct fs_envblk_spec *fs_envblk_spec_t;
 typedef struct fs_envblk *fs_envblk_t;
 
 fs_envblk_t fs_envblk = NULL;
