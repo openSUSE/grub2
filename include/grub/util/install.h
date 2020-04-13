@@ -272,4 +272,6 @@ extern char *grub_install_copy_buffer;
 int
 grub_install_is_short_mbrgap_supported (void);
 
+int
+grub_install_sync_fs_journal (const char *path);
 #endif
