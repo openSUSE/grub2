@@ -269,4 +269,6 @@ grub_util_get_target_name (const struct grub_install_image_target_desc *t);
 extern char *grub_install_copy_buffer;
 #define GRUB_INSTALL_COPY_BUFFER_SIZE 1048576
 
+int
+grub_install_sync_fs_journal (const char *path);
 #endif
