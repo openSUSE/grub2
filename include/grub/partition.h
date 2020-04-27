@@ -52,10 +52,12 @@ struct grub_partition_map
 			 grub_partition_iterate_hook_t hook, void *hook_data);
 #ifdef GRUB_UTIL
   /* Determine sectors available for embedding.  */
+#define GRUB_MIN_RECOMMENDED_MBRGAP 1900
   grub_err_t (*embed) (struct grub_disk *disk, unsigned int *nsectors,
 		       unsigned int max_nsectors,
 		       grub_embed_type_t embed_type,
-		       grub_disk_addr_t **sectors);
+		       grub_disk_addr_t **sectors,
+		       int warn_short);
 #endif
 };
 typedef struct grub_partition_map *grub_partition_map_t;
