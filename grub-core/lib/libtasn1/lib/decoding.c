@@ -1620,6 +1620,7 @@ asn1_der_decoding (asn1_node * element, const void *ider, int ider_len,
   return asn1_der_decoding2 (element, ider, &ider_len, 0, errorDescription);
 }
 
+#if 0
 /**
  * asn1_der_decoding_element:
  * @structure: pointer to an ASN1 structure
@@ -1650,6 +1651,7 @@ asn1_der_decoding_element (asn1_node * structure, const char *elementName,
 {
   return asn1_der_decoding (structure, ider, len, errorDescription);
 }
+#endif
 
 /**
  * asn1_der_decoding_startEnd:
