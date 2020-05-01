@@ -32,7 +32,8 @@
 #include <element.h>
 #include <limits.h>
 #include <intprops.h>
-#include "c-ctype.h"
+
+#define c_isdigit grub_isdigit
 
 #ifdef DEBUG
 # define warn() fprintf(stderr, "%s: %d\n", __func__, __LINE__)
@@ -2016,8 +2017,8 @@ asn1_expand_octet_string (asn1_node_const definitions, asn1_node * element,
 	  (p2->type & CONST_ASSIGN))
 	{
 	  strcpy (name, definitions->name);
-	  strcat (name, ".");
-	  strcat (name, p2->name);
+	  _asn1_strcat (name, ".");
+	  _asn1_strcat (name, p2->name);
 
 	  len = sizeof (value);
 	  result = asn1_read_value (definitions, name, value, &len);
@@ -2034,8 +2035,8 @@ asn1_expand_octet_string (asn1_node_const definitions, asn1_node * element,
 	      if (p2)
 		{
 		  strcpy (name, definitions->name);
-		  strcat (name, ".");
-		  strcat (name, p2->name);
+		  _asn1_strcat (name, ".");
+		  _asn1_strcat (name, p2->name);
 
 		  result = asn1_create_element (definitions, name, &aux);
 		  if (result == ASN1_SUCCESS)
