@@ -1147,7 +1147,7 @@ module = {
 module = {
   name = videotest;
   common = commands/videotest.c;
-  emu_condition = COND_NOT_s390x;
+  emu_condition = COND_NOT_emu;
 };
 
 module = {
@@ -1597,7 +1597,7 @@ module = {
   common = gfxmenu/gui_progress_bar.c;
   common = gfxmenu/gui_util.c;
   common = gfxmenu/gui_string_util.c;
-  emu_condition = COND_NOT_s390x;
+  emu_condition = COND_NOT_emu;
 };
 
 module = {
@@ -2032,13 +2032,13 @@ module = {
   name = gfxterm;
   common = term/gfxterm.c;
   enable = videomodules;
-  emu_condition = COND_NOT_s390x;
+  emu_condition = COND_NOT_emu;
 };
 
 module = {
   name = gfxterm_background;
   common = term/gfxterm_background.c;
-  emu_condition = COND_NOT_s390x;
+  emu_condition = COND_NOT_emu;
 };
 
 module = {
@@ -2157,9 +2157,7 @@ module = {
   enable = i386_xen_pvh;
   enable = i386_efi;
   enable = x86_64_efi;
-  enable = emu;
   enable = xen;
-  emu_condition = COND_NOT_s390x;
 };
 
 module = {
@@ -2206,7 +2204,7 @@ module = {
 module = {
   name = gfxterm_menu;
   common = tests/gfxterm_menu.c;
-  emu_condition = COND_NOT_s390x;
+  emu_condition = COND_NOT_emu;
 };
 
 module = {
@@ -2358,9 +2356,7 @@ module = {
   enable = i386_xen_pvh;
   enable = i386_efi;
   enable = x86_64_efi;
-  enable = emu;
   enable = xen;
-  emu_condition = COND_NOT_s390x;
 };
 
 module = {
