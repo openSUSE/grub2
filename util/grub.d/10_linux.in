@@ -31,7 +31,7 @@ CLASS="--class gnu-linux --class gnu --class os"
 if [ "x${GRUB_DISTRIBUTOR}" = "x" ] ; then
   OS=GNU/Linux
 else
-  OS="${GRUB_DISTRIBUTOR} GNU/Linux"
+  OS="${GRUB_DISTRIBUTOR}"
   CLASS="--class $(echo ${GRUB_DISTRIBUTOR} | tr 'A-Z' 'a-z' | cut -d' ' -f1|LC_ALL=C sed 's,[^[:alnum:]_],_,g') ${CLASS}"
 fi
 
@@ -141,7 +141,7 @@ linux_entry ()
   message="$(gettext_printf "Loading Linux %s ..." ${version})"
   sed "s/^/$submenu_indentation/" << EOF
 	echo	'$(echo "$message" | grub_quote)'
-	linux	${rel_dirname}/${basename} root=${linux_root_device_thisversion} ro ${args}
+	linux	${rel_dirname}/${basename} root=${linux_root_device_thisversion} ${args}
 EOF
   if test -n "${initrd}" ; then
     # TRANSLATORS: ramdisk isn't identifier. Should be translated.
