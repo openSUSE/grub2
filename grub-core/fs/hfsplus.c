@@ -1012,7 +1012,7 @@ grub_hfsplus_label (grub_device_t device, char **label)
 	return 0;
     }
 
-  *label = grub_malloc (label_len * GRUB_MAX_UTF8_PER_UTF16 + 1);
+  *label = grub_calloc (label_len, GRUB_MAX_UTF8_PER_UTF16 + 1);
   if (! *label)
     return grub_errno;
 
