@@ -456,7 +456,7 @@ grub_lvm_detect (grub_disk_t disk,
 #endif
 		  goto lvs_fail;
 		}
-	      lv->segments = grub_zalloc (sizeof (*seg) * lv->segment_count);
+	      lv->segments = grub_calloc (lv->segment_count, sizeof (*seg));
 	      seg = lv->segments;
 
 	      for (i = 0; i < lv->segment_count; i++)
@@ -513,8 +513,8 @@ grub_lvm_detect (grub_disk_t disk,
 		      if (seg->node_count != 1)
 			seg->stripe_size = grub_lvm_getvalue (&p, "stripe_size = ");
 
-		      seg->nodes = grub_zalloc (sizeof (*stripe)
-						* seg->node_count);
+		      seg->nodes = grub_calloc (seg->node_count,
+						sizeof (*stripe));
 		      stripe = seg->nodes;
 
 		      p = grub_strstr (p, "stripes = [");
