@@ -2928,6 +2928,7 @@ grub_btrfs_get_parent_subvol_path (struct grub_btrfs_data *data,
   grub_disk_addr_t elemaddr;
   grub_err_t err;
   char *parent_path;
+  grub_size_t sz;
 
   *parent_id = 0;
   *path_out = 0;
@@ -2946,7 +2947,10 @@ grub_btrfs_get_parent_subvol_path (struct grub_btrfs_data *data,
       return grub_error(GRUB_ERR_FILE_NOT_FOUND, N_("can't find root backrefs"));
     }
 
-  buf = grub_malloc(elemsize + 1);
+  if (grub_add (elemsize, 1, &sz))
+    return grub_error (GRUB_ERR_OUT_OF_RANGE, N_("overflow is detected"));
+
+  buf = grub_malloc(sz);
   if (!buf)
     {
       free_iterator(&desc);
@@ -3000,6 +3004,7 @@ grub_btrfs_get_default_subvolume_id (struct grub_btrfs_data *data, grub_uint64_t
   struct grub_btrfs_dir_item *direl = NULL;
   const char *ctoken = "default";
   grub_size_t ctokenlen = sizeof ("default") - 1;
+  grub_size_t sz;
 
   *id = 0;
   key.object_id = data->sblock.root_dir_objectid;
@@ -3014,7 +3019,14 @@ grub_btrfs_get_default_subvolume_id (struct grub_btrfs_data *data, grub_uint64_t
     return grub_error (GRUB_ERR_FILE_NOT_FOUND, N_("file not found"));
 
   struct grub_btrfs_dir_item *cdirel;
-  direl = grub_malloc (elemsize + 1);
+
+  if (grub_add (elemsize, 1, &sz))
+    return grub_error (GRUB_ERR_OUT_OF_RANGE, N_("overflow is detected"));
+
+  direl = grub_malloc (sz);
+  if (!direl)
+    return grub_errno;
+
   err = grub_btrfs_read_logical (data, elemaddr, direl, elemsize, 0);
   if (err)
     {
