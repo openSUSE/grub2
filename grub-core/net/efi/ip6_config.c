@@ -3,6 +3,7 @@
 #include <grub/misc.h>
 #include <grub/net/efi.h>
 #include <grub/charset.h>
+#include <grub/safemath.h>
 
 char *
 grub_efi_ip6_address_to_string (grub_efi_pxe_ipv6_address_t *address)
@@ -229,12 +230,19 @@ grub_efi_ip6_interface_route_table (struct grub_efi_net_device *dev)
   grub_efi_ip6_config_interface_info_t *interface_info;
   char **ret;
   int i, id;
+  grub_size_t sz;
 
   interface_info = efi_ip6_config_interface_info (dev->ip6_config);
   if (!interface_info)
     return NULL;
 
-  ret = grub_malloc (sizeof (*ret) * (interface_info->route_count + 1));
+  if (grub_add (interface_info->route_count, 1, &sz))
+    {
+      grub_free (interface_info);
+      return NULL;
+    }
+
+  ret = grub_calloc (sz, sizeof (*ret));
 
   if (!ret)
     {

@@ -80,7 +80,7 @@ grub_efi_dhcp4_parse_dns (grub_efi_dhcp4_protocol_t *dhcp4, grub_efi_dhcp4_packe
   if (status != GRUB_EFI_BUFFER_TOO_SMALL)
     return NULL;
 
-  option_list = grub_malloc (option_count * sizeof(*option_list));
+  option_list = grub_calloc (option_count, sizeof(*option_list));
   if (!option_list)
     return NULL;
 
@@ -360,7 +360,9 @@ grub_cmd_efi_bootp6 (struct grub_command *cmd __attribute__ ((unused)),
 
 	if (status == GRUB_EFI_BUFFER_TOO_SMALL && count)
 	  {
-	    options = grub_malloc (count * sizeof(*options));
+	    options = grub_calloc (count, sizeof(*options));
+	    if (!options)
+	      return grub_error (GRUB_ERR_OUT_OF_RANGE, N_("overflow is detected"));
 	    status = efi_call_4 (dev->dhcp6->parse, dev->dhcp6, mode.ia->reply_packet, &count, options);
 	  }
 
