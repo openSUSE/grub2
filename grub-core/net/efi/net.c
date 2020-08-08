@@ -12,6 +12,7 @@
 #include <grub/efi/dhcp.h>
 #include <grub/net/efi.h>
 #include <grub/charset.h>
+#include <grub/safemath.h>
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
@@ -237,7 +238,15 @@ pxe_get_boot_location_v6 (const struct grub_net_dhcp6_packet *dp,
 
       if (code == GRUB_NET_DHCP6_OPTION_BOOTFILE_URL)
 	{
-	  char *url = grub_malloc (len + 1);
+	  char *url;
+	  grub_size_t sz;
+
+	  if (grub_add (len, 1, &sz))
+	    return;
+
+	  url = grub_malloc (sz);
+	  if (!url)
+	    return;
 
 	  grub_memcpy (url, dhcp_opt->data, len);
 	  url[len] = 0;
