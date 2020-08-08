@@ -4,6 +4,7 @@
 #include <grub/misc.h>
 #include <grub/net/efi.h>
 #include <grub/charset.h>
+#include <grub/safemath.h>
 
 static void
 http_configure (struct grub_efi_net_device *dev, int prefer_ip6)
@@ -128,6 +129,7 @@ efihttp_request (grub_efi_http_t *http, char *server, char *name, int use_https,
     grub_efi_char16_t *ucs2_url;
     grub_size_t url_len, ucs2_url_len;
     const char *protocol = (use_https == 1) ? "https" : "http";
+    grub_size_t sz;
 
     if (grub_efi_string_to_ip6_address (server, &address, &rest) && *rest == 0)
       url = grub_xasprintf ("%s://[%s]%s", protocol, server, name);
@@ -140,8 +142,11 @@ efihttp_request (grub_efi_http_t *http, char *server, char *name, int use_https,
       }
 
     url_len = grub_strlen (url);
-    ucs2_url_len = url_len * GRUB_MAX_UTF16_PER_UTF8;
-    ucs2_url = grub_malloc ((ucs2_url_len + 1) * sizeof (ucs2_url[0]));
+    if (grub_mul (url_len, GRUB_MAX_UTF16_PER_UTF8, &ucs2_url_len) ||
+	grub_add (ucs2_url_len, 1, &sz))
+      return GRUB_ERR_OUT_OF_RANGE;
+
+    ucs2_url = grub_calloc (sz, sizeof (ucs2_url[0]));
 
     if (!ucs2_url)
       {
