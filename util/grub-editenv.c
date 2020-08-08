@@ -513,7 +513,7 @@ probe_fs_envblk (fs_envblk_spec_t spec)
       ndev++;
     }
 
-  grub_drives = xmalloc (sizeof (grub_drives[0]) * (ndev + 1));
+  grub_drives = xcalloc ((ndev + 1), sizeof (grub_drives[0]));
 
   for (curdev = grub_devices, curdrive = grub_drives; *curdev; curdev++,
        curdrive++)
