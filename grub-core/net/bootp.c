@@ -848,7 +848,7 @@ parse_dhcp6_option (const struct grub_net_dhcp6_option *opt, void *data)
 	      break;
 	    }
 	  dhcp6->num_dns_server = ln = len >> 4;
-	  dhcp6->dns_server_addrs = la = grub_zalloc (ln * sizeof (*la));
+	  dhcp6->dns_server_addrs = la = grub_calloc (ln, sizeof (*la));
 
 	  for (po = opt->data; ln > 0; po += 0x10, la++, ln--)
 	    {
