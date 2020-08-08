@@ -1864,8 +1864,12 @@ find_pathname(struct grub_btrfs_data *data, grub_uint64_t objectid,
          key_out.object_id != key_out.offset) {
     struct grub_btrfs_inode_ref *inode_ref;
     char *new;
+    grub_size_t sz;
 
-    inode_ref = grub_malloc(elemsize + 1);
+    if (grub_add (elemsize, 1, &sz))
+      return grub_error (GRUB_ERR_OUT_OF_RANGE, N_("overflow is detected"));
+
+    inode_ref = grub_malloc(sz);
     if (!inode_ref)
       return grub_error(GRUB_ERR_OUT_OF_MEMORY,
                         "couldn't allocate memory for inode_ref (%"PRIuGRUB_SIZE")\n", elemsize);
@@ -1874,7 +1878,10 @@ find_pathname(struct grub_btrfs_data *data, grub_uint64_t objectid,
     if (err)
       return grub_error(err, "read_logical caught %d\n", err);
 
-    alloc += grub_le_to_cpu16 (inode_ref->n) + 2;
+    if (grub_add (grub_le_to_cpu16 (inode_ref->n), 2, &sz) ||
+	grub_add (alloc, sz, &alloc))
+      return grub_error (GRUB_ERR_OUT_OF_RANGE, N_("overflow is detected"));
+
     new = grub_malloc(alloc);
     if (!new)
       return grub_error(GRUB_ERR_OUT_OF_MEMORY,
@@ -2836,9 +2843,15 @@ grub_cmd_btrfs_list_subvols (struct grub_extcmd_context *ctxt,
 
       if (elemsize > allocated)
         {
+	  grub_size_t sz;
+
           grub_free(buf);
-          allocated = 2 * elemsize;
-          buf = grub_malloc(allocated + 1);
+
+	  if (grub_mul (elemsize, 2, &allocated) ||
+	      grub_add (allocated, 1, &sz))
+	    return grub_error (GRUB_ERR_OUT_OF_RANGE, N_("overflow is detected"));
+
+          buf = grub_malloc(sz);
           if (!buf)
             {
               r = -grub_errno;
