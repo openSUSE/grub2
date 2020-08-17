@@ -232,7 +232,7 @@ grub_ieee1275_parse_bootpath (const char *devpath, char *bootpath,
         }
 
       grub_net_add_ipv4_local (inter,
-                          __builtin_ctz (~grub_le_to_cpu32 (subnet_mask.ipv4)));
+                          __builtin_clz (~ (subnet_mask.ipv4)));
     }
 
   if (gateway_addr.ipv4 != 0)
