@@ -188,13 +188,20 @@ grub_partition_msdos_iterate (grub_disk_t disk,
 			(unsigned long long) p.len);
 
 	  /* If this partition is a normal one, call the hook.  */
-	  if (! grub_msdos_partition_is_empty (e->type)
-	      && ! grub_msdos_partition_is_extended (e->type))
+	  if (! grub_msdos_partition_is_empty (e->type))
 	    {
-	      p.number++;
+	      if (!grub_msdos_partition_is_extended (e->type) || p.number < 3)
+		{
+		  p.number++;
 
-	      if (hook (disk, &p, hook_data))
-		return grub_errno;
+		  /* prevent someone doing mkfs or mkswap on an
+		  extended partition, but leave room for LILO */
+		  if (grub_msdos_partition_is_extended (e->type))
+		    p.len = 2;
+
+		  if (hook (disk, &p, hook_data))
+		    return grub_errno;
+		}
 	    }
 	  else if (p.number < 3)
 	    /* If this partition is a logical one, shouldn't increase the
