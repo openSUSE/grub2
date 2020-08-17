@@ -1670,9 +1670,9 @@ module = {
   ia64_efi = loader/ia64/efi/linux.c;
   arm = loader/arm/linux.c;
   arm64 = loader/arm64/linux.c;
+  emu = loader/emu/linux.c;
   common = loader/linux.c;
   common = lib/cmdline.c;
-  enable = noemu;
 };
 
 module = {
