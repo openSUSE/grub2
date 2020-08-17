@@ -172,6 +172,23 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
       goto fail;
     }
 
+  if (grub_efi_secure_boot())
+    {
+      grub_dl_t mod;
+
+      mod = grub_dl_get ("shim_lock");
+      if (!mod)
+	{
+	  grub_error (GRUB_ERR_ACCESS_DENIED, N_("shim_lock module is not loaded"));
+	  goto fail;
+	}
+      if (!grub_dl_is_persistent (mod))
+	{
+	  grub_error (GRUB_ERR_ACCESS_DENIED, N_("shim_lock protocol is not available"));
+	  goto fail;
+	}
+    }
+
   file = grub_file_open (argv[0], GRUB_FILE_TYPE_LINUX_KERNEL);
   if (! file)
     goto fail;
