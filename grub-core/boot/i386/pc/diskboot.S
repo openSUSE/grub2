@@ -19,8 +19,6 @@
 #include <grub/symbol.h>
 #include <grub/machine/boot.h>
 
-#define TPM 1
-
 /*
  *  defines for the code go here
  */

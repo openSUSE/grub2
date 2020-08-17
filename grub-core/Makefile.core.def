@@ -451,6 +451,20 @@ image = {
 };
 
 image = {
+  name = diskboot_tpm;
+  i386_pc = boot/i386/pc/diskboot.S;
+
+  cppflags = '-DTPM=1';
+
+  i386_pc_ldflags = '$(TARGET_IMG_LDFLAGS)';
+  i386_pc_ldflags = '$(TARGET_IMG_BASE_LDOPT),0x8000';
+
+  objcopyflags = '-O binary';
+
+  enable = i386_pc;
+};
+
+image = {
   name = lnxboot;
   i386_pc = boot/i386/pc/lnxboot.S;
 

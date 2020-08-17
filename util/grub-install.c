@@ -1635,6 +1635,16 @@ main (int argc, char *argv[])
 
 
     case GRUB_INSTALL_PLATFORM_I386_PC:
+      if (suse_enable_tpm)
+	{
+	  snprintf (mkimage_target, sizeof (mkimage_target),
+		    "%s-%s-tpm",
+		    grub_install_get_platform_cpu (platform),
+		    grub_install_get_platform_platform (platform));
+	  core_name = "core.img";
+	  break;
+	}
+      /* FALLTHROUGH */
     case GRUB_INSTALL_PLATFORM_MIPSEL_ARC:
     case GRUB_INSTALL_PLATFORM_MIPS_ARC:
     case GRUB_INSTALL_PLATFORM_ARM_UBOOT:

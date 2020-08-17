@@ -165,6 +165,22 @@ static const struct grub_install_image_target_desc image_targets[] =
       .default_compression = GRUB_COMPRESSION_LZMA
     },
     {
+      .dirname = "i386-pc",
+      .names = { "i386-pc-tpm", NULL },
+      .voidp_sizeof = 4,
+      .bigendian = 0,
+      .id = IMAGE_I386_PC_TPM,
+      .flags = PLATFORM_FLAGS_DECOMPRESSORS,
+      .total_module_size = TARGET_NO_FIELD,
+      .decompressor_compressed_size = GRUB_DECOMPRESSOR_I386_PC_COMPRESSED_SIZE,
+      .decompressor_uncompressed_size = GRUB_DECOMPRESSOR_I386_PC_UNCOMPRESSED_SIZE,
+      .decompressor_uncompressed_addr = TARGET_NO_FIELD,
+      .section_align = 1,
+      .vaddr_offset = 0,
+      .link_addr = GRUB_KERNEL_I386_PC_LINK_ADDR,
+      .default_compression = GRUB_COMPRESSION_LZMA
+    },
+    {
       .dirname = "i386-efi",
       .names = { "i386-efi", NULL },
       .voidp_sizeof = 4,
@@ -756,7 +772,8 @@ grub_install_generate_image (const char *dir, const char *prefix,
 
   if (image_target->id == IMAGE_I386_PC
       || image_target->id == IMAGE_I386_PC_PXE
-      || image_target->id == IMAGE_I386_PC_ELTORITO)
+      || image_target->id == IMAGE_I386_PC_ELTORITO
+      || image_target->id == IMAGE_I386_PC_TPM)
     comp = GRUB_COMPRESSION_LZMA;
 
   path_list = grub_util_resolve_dependencies (dir, "moddep.lst", mods);
@@ -980,7 +997,8 @@ grub_install_generate_image (const char *dir, const char *prefix,
 
       if ((image_target->id == IMAGE_I386_PC
 	   || image_target->id == IMAGE_I386_PC_PXE
-	   || image_target->id == IMAGE_I386_PC_ELTORITO)
+	   || image_target->id == IMAGE_I386_PC_ELTORITO
+	   || image_target->id == IMAGE_I386_PC_TPM)
 	  && decompress_size > GRUB_KERNEL_I386_PC_LINK_ADDR - 0x8200)
 	grub_util_error ("%s", _("Decompressor is too big"));
 
@@ -1023,6 +1041,7 @@ grub_install_generate_image (const char *dir, const char *prefix,
     case IMAGE_I386_PC:
     case IMAGE_I386_PC_PXE:
     case IMAGE_I386_PC_ELTORITO:
+    case IMAGE_I386_PC_TPM:
 	if (GRUB_KERNEL_I386_PC_LINK_ADDR + core_size > 0x78000
 	    || (core_size > (0xffff << GRUB_DISK_SECTOR_BITS))
 	    || (layout.kernel_size + layout.bss_size
@@ -1061,6 +1080,7 @@ grub_install_generate_image (const char *dir, const char *prefix,
     case IMAGE_I386_PC:
     case IMAGE_I386_PC_PXE:
     case IMAGE_I386_PC_ELTORITO:
+    case IMAGE_I386_PC_TPM:
       {
 	unsigned num;
 	char *boot_path, *boot_img;
@@ -1110,7 +1130,10 @@ grub_install_generate_image (const char *dir, const char *prefix,
 	    free (eltorito_path);
 	  }
 
-	boot_path = grub_util_get_path (dir, "diskboot.img");
+	if (image_target->id == IMAGE_I386_PC_TPM)
+	  boot_path = grub_util_get_path (dir, "diskboot_tpm.img");
+	else
+	  boot_path = grub_util_get_path (dir, "diskboot.img");
 	boot_size = grub_util_get_image_size (boot_path);
 	if (boot_size != GRUB_DISK_SECTOR_SIZE)
 	  grub_util_error (_("diskboot.img size must be %u bytes"),
