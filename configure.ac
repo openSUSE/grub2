@@ -181,9 +181,9 @@ if test x$platform != xemu ; then
    esac
 fi
 
-if test x"$target_cpu-$platform" = xsparc64-emu ; then
-   target_m64=1
-fi
+case x"$target_cpu-$platform" in
+    xsparc64-emu | xs390x-emu) target_m64=1 ;;
+esac
 
 case "$target_os" in
   windows* | mingw32*) target_os=cygwin ;;
@@ -1908,6 +1908,9 @@ AM_CONDITIONAL([COND_arm_uboot], [test x$target_cpu = xarm -a x$platform = xuboo
 AM_CONDITIONAL([COND_arm_efi], [test x$target_cpu = xarm -a x$platform = xefi])
 AM_CONDITIONAL([COND_arm64], [test x$target_cpu = xarm64 ])
 AM_CONDITIONAL([COND_arm64_efi], [test x$target_cpu = xarm64 -a x$platform = xefi])
+AM_CONDITIONAL([COND_s390x], [test x$target_cpu = xs390x ])
+AM_CONDITIONAL([COND_NOT_s390x], [test x$target_cpu != xs390x ])
+AM_CONDITIONAL([COND_s390x_emu], [test x$target_cpu = xs390x -a x$platform = xemu])
 
 AM_CONDITIONAL([COND_HOST_HURD], [test x$host_kernel = xhurd])
 AM_CONDITIONAL([COND_HOST_LINUX], [test x$host_kernel = xlinux])
