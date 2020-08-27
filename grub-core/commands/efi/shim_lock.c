@@ -82,7 +82,8 @@ shim_lock_init (grub_file_t io, enum grub_file_type type,
 
     case GRUB_FILE_TYPE_ACPI_TABLE:
     case GRUB_FILE_TYPE_DEVICE_TREE_IMAGE:
-      *flags = GRUB_VERIFY_FLAGS_DEFER_AUTH;
+      if (grub_efi_secure_boot())
+	*flags = GRUB_VERIFY_FLAGS_DEFER_AUTH;
 
       return GRUB_ERR_NONE;
 
