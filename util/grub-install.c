@@ -1340,8 +1340,9 @@ main (int argc, char *argv[])
 	}
     }
 
-  grub_install_copy_files (grub_install_source_directory,
-			   grubdir, platform);
+  if (platform != GRUB_INSTALL_PLATFORM_I386_PC)
+    grub_install_copy_files (grub_install_source_directory,
+			     grubdir, platform);
 
   char *envfile = grub_util_path_concat (2, grubdir, "grubenv");
   if (!grub_util_is_regular (envfile))
@@ -1964,6 +1965,8 @@ main (int argc, char *argv[])
 				  fs_probe, allow_floppy, add_rs_codes,
 				  warn_short_mbr_gap);
 	  }
+	grub_install_copy_files (grub_install_source_directory,
+				 grubdir, platform);
 	break;
       }
     case GRUB_INSTALL_PLATFORM_SPARC64_IEEE1275:
