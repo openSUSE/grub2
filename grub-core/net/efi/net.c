@@ -801,13 +801,16 @@ match_route (const char *server)
   grub_efi_net_interface_t *inf;
   int is_ip6 = 0;
 
+  grub_error_push ();
   err = grub_efi_net_parse_address (server, &ip4, &ip6, &is_ip6, 0);
 
   if (err)
     {
-      grub_print_error ();
+      grub_dprintf ("efinetfs", "error in matching route : %s\n", grub_errmsg);
+      grub_error_pop ();
       return NULL;
     }
+  grub_error_pop ();
 
   if (is_ip6)
     {
