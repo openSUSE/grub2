@@ -498,6 +498,7 @@ grub_ofdisk_open (const char *name, grub_disk_t disk)
     grub_ieee1275_open (op->open_path, &last_ihandle);
     if (! last_ihandle)
       return grub_error (GRUB_ERR_UNKNOWN_DEVICE, "can't open device");
+    last_devpath = op->open_path;
   }
 
   if (grub_ieee1275_finddevice (devpath, &dev))
