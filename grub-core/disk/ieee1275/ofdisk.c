@@ -36,6 +36,7 @@ struct ofdisk_hash_ent
   int is_boot;
   int is_removable;
   int block_size_fails;
+  unsigned int block_size;
   /* Pointer to shortest available name on nodes representing canonical names,
      otherwise NULL.  */
   const char *shortest;
@@ -44,8 +45,7 @@ struct ofdisk_hash_ent
 };
 
 static grub_err_t
-grub_ofdisk_get_block_size (grub_uint32_t *block_size,
-			    struct ofdisk_hash_ent *op);
+grub_ofdisk_get_block_size (struct ofdisk_hash_ent *op);
 
 #define OFDISK_HASH_SZ	8
 static struct ofdisk_hash_ent *ofdisk_hash[OFDISK_HASH_SZ];
@@ -459,7 +459,6 @@ grub_ofdisk_open (const char *name, grub_disk_t disk)
   /* XXX: This should be large enough for any possible case.  */
   char prop[64];
   grub_ssize_t actual;
-  grub_uint32_t block_size = 0;
   grub_err_t err;
   struct ofdisk_hash_ent *op;
 
@@ -532,16 +531,16 @@ grub_ofdisk_open (const char *name, grub_disk_t disk)
     disk->id = (unsigned long) op;
     disk->data = op->open_path;
 
-    err = grub_ofdisk_get_block_size (&block_size, op);
+    err = grub_ofdisk_get_block_size (op);
     if (err)
       {
         grub_free (devpath);
         return err;
       }
-    if (block_size != 0)
+    if (op->block_size != 0)
       {
 	for (disk->log_sector_size = 0;
-	     (1U << disk->log_sector_size) < block_size;
+	     (1U << disk->log_sector_size) < op->block_size;
 	     disk->log_sector_size++);
       }
     else
@@ -701,8 +700,7 @@ grub_ofdisk_init (void)
 }
 
 static grub_err_t
-grub_ofdisk_get_block_size (grub_uint32_t *block_size,
-			    struct ofdisk_hash_ent *op)
+grub_ofdisk_get_block_size (struct ofdisk_hash_ent *op)
 {
   struct size_args_ieee1275
     {
@@ -714,7 +712,17 @@ grub_ofdisk_get_block_size (grub_uint32_t *block_size,
       grub_ieee1275_cell_t size2;
     } args_ieee1275;
 
-  *block_size = 0;
+  /*
+   * The value of op->block_size_fails
+   * -1 : Last attempt is successful
+   *  0 : No attempt is made (initial value)
+   * >0 : Number of failed attepmt
+   */
+
+  if (op->block_size_fails == -1)
+    return GRUB_ERR_NONE;
+
+  op->block_size = 0;
 
   if (op->block_size_fails >= 2)
     return GRUB_ERR_NONE;
@@ -739,8 +747,8 @@ grub_ofdisk_get_block_size (grub_uint32_t *block_size,
 	   && !(args_ieee1275.size1 & (args_ieee1275.size1 - 1))
 	   && args_ieee1275.size1 >= 512 && args_ieee1275.size1 <= 16384)
     {
-      op->block_size_fails = 0;
-      *block_size = args_ieee1275.size1;
+      op->block_size_fails = -1;
+      op->block_size = args_ieee1275.size1;
     }
 
   return 0;
