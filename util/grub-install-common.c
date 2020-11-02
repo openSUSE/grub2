@@ -190,18 +190,28 @@ clean_grub_dir (const char *di)
 {
   grub_util_fd_dir_t d;
   grub_util_fd_dirent_t de;
+  int skip_img = 0;
 
   d = grub_util_fd_opendir (di);
   if (!d)
     grub_util_error (_("cannot open directory `%s': %s"),
 		     di, grub_util_fd_strerror ());
 
+  {
+    char *plat_i386_pc = grub_install_get_platform_name (GRUB_INSTALL_PLATFORM_I386_PC);
+    const char *plat = strrchr (di, '/');
+
+    if (plat && strcmp (plat + 1, plat_i386_pc) == 0)
+      skip_img = 1;
+    free (plat_i386_pc);
+  }
+
   while ((de = grub_util_fd_readdir (d)))
     {
       const char *ext = strrchr (de->d_name, '.');
       if ((ext && (strcmp (ext, ".mod") == 0
 		   || strcmp (ext, ".lst") == 0
-		   || strcmp (ext, ".img") == 0
+		   || (!skip_img && strcmp (ext, ".img") == 0)
 		   || strcmp (ext, ".mo") == 0)
 	   && strcmp (de->d_name, "menu.lst") != 0)
 	  || strcmp (de->d_name, "efiemu32.o") == 0
