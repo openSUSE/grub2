@@ -1854,9 +1854,11 @@ module = {
 
 module = {
   name = linuxefi;
-  efi = lib/fake_module.c;
+  x86 = lib/fake_module.c;
+  arm64 = loader/arm64/efi/linux.c;
   enable = i386_efi;
   enable = x86_64_efi;
+  enable = arm64_efi;
 };
 
 module = {
