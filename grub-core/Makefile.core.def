@@ -1787,7 +1787,7 @@ module = {
   arm_coreboot = loader/arm/linux.c;
   arm_efi = loader/arm64/linux.c;
   arm_uboot = loader/arm/linux.c;
-  arm64 = loader/arm64/linux.c;
+  arm64 = loader/arm64/efi/linux.c;
   riscv32 = loader/riscv/linux.c;
   riscv64 = loader/riscv/linux.c;
   emu = loader/emu/linux.c;
@@ -1855,10 +1855,8 @@ module = {
 module = {
   name = linuxefi;
   x86 = lib/fake_module.c;
-  arm64 = loader/arm64/efi/linux.c;
   enable = i386_efi;
   enable = x86_64_efi;
-  enable = arm64_efi;
 };
 
 module = {

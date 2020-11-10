@@ -123,9 +123,8 @@ grub_efi_linux_boot (void *kernel_address, grub_off_t offset,
 
 #pragma GCC diagnostic pop
 
-/* FIXME: This is copy of grub_arch_efi_linux_check_image () */
-static grub_err_t
-grub_arch_efi_linux_check_image_XX (struct linux_arch_kernel_header * lh)
+grub_err_t
+grub_arch_efi_linux_check_image (struct linux_arch_kernel_header * lh)
 {
   if (lh->magic != GRUB_LINUX_ARMXX_MAGIC_SIGNATURE)
     return grub_error(GRUB_ERR_BAD_OS, "invalid magic number");
@@ -263,9 +262,10 @@ free_params (void)
     }
 }
 
-/* FIXME: This is to replace grub_arch_efi_linux_boot_image */
-static grub_err_t
-grub_arch_efi_linux_boot_image_XX (grub_addr_t addr, char *args)
+grub_err_t
+grub_arch_efi_linux_boot_image (grub_addr_t addr,
+			        grub_size_t size __attribute__ ((unused)),
+			        char *args)
 {
   grub_err_t retval;
 
@@ -285,7 +285,7 @@ grub_arch_efi_linux_boot_image_XX (grub_addr_t addr, char *args)
 static grub_err_t
 grub_linux_boot (void)
 {
-  return (grub_arch_efi_linux_boot_image_XX ((grub_addr_t)kernel_addr, linux_args));
+  return (grub_arch_efi_linux_boot_image ((grub_addr_t)kernel_addr, kernel_size, linux_args));
 }
 
 static grub_err_t
@@ -432,7 +432,7 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
   if (grub_file_read (file, &lh, sizeof (lh)) < (long) sizeof (lh))
     return grub_errno;
 
-  if (grub_arch_efi_linux_check_image_XX (&lh) != GRUB_ERR_NONE)
+  if (grub_arch_efi_linux_check_image (&lh) != GRUB_ERR_NONE)
     goto fail;
 
   grub_loader_unset();
@@ -518,9 +518,9 @@ static grub_command_t cmd_linux, cmd_initrd;
 
 GRUB_MOD_INIT (linux)
 {
-  cmd_linux = grub_register_command ("linuxefi", grub_cmd_linux, 0,
+  cmd_linux = grub_register_command ("linux", grub_cmd_linux, 0,
 				     N_("Load Linux."));
-  cmd_initrd = grub_register_command ("initrdefi", grub_cmd_initrd, 0,
+  cmd_initrd = grub_register_command ("initrd", grub_cmd_initrd, 0,
 				      N_("Load initrd."));
   my_mod = mod;
 }
