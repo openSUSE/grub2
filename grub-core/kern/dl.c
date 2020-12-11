@@ -39,7 +39,7 @@
 #endif
 
 #ifdef GRUB_MACHINE_EFI
-#include <grub/efi/efi.h>
+#include <grub/efi/sb.h>
 #endif
 
 
@@ -693,7 +693,7 @@ grub_dl_load_file (const char *filename)
   grub_boot_time ("Loading module %s", filename);
 
 #ifdef GRUB_MACHINE_EFI
-  if (grub_efi_secure_boot ())
+  if (grub_efi_get_secureboot () == GRUB_EFI_SECUREBOOT_MODE_ENABLED)
     {
 #if 0
       /* This is an error, but grub2-mkconfig still generates a pile of
