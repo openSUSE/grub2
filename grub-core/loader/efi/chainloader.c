@@ -46,6 +46,7 @@
 
 #ifdef SUPPORT_SECURE_BOOT
 #include <grub/efi/pe32.h>
+#include <grub/efi/sb.h>
 #endif
 
 GRUB_MOD_LICENSE ("GPLv3+");
@@ -296,57 +297,6 @@ grub_secure_validate (void *data, grub_efi_uint32_t size)
 
   grub_error (GRUB_ERR_BAD_ARGUMENT, "verify failed");
   return 0;
-}
-
-static grub_efi_boolean_t
-grub_secure_mode (void)
-{
-  grub_efi_guid_t efi_var_guid = GRUB_EFI_GLOBAL_VARIABLE_GUID;
-  grub_uint8_t *data;
-  grub_size_t datasize;
-
-  data = grub_efi_get_variable ("SecureBoot", &efi_var_guid, &datasize);
-
-  if (data)
-    {
-      grub_dprintf ("chain", "SecureBoot: %d, datasize %d\n", (int)*data, (int)datasize);
-    }
-
-  if (data && (datasize == 1))
-    {
-      if (*data != 1)
-        {
-          grub_dprintf ("chain", "secure boot not enabled\n");
-          return 0;
-        }
-    }
-  else
-    {
-      grub_dprintf ("chain", "unknown secure boot status\n");
-      return 0;
-    }
-
-  grub_free (data);
-
-  data = grub_efi_get_variable ("SetupMode", &efi_var_guid, &datasize);
-
-  if (data)
-    {
-      grub_dprintf ("chain", "SetupMode: %d, datasize %d\n", (int)*data, (int)datasize);
-    }
-
-  if (data && (datasize == 1))
-    {
-      if (*data == 1)
-        {
-          grub_dprintf ("chain", "platform in setup mode\n");
-          return 0;
-        }
-    }
-
-  grub_free (data);
-
-  return 1;
 }
 
 static grub_efi_boolean_t
@@ -853,7 +803,7 @@ grub_cmd_chainloader (grub_command_t cmd __attribute__ ((unused)),
 
 #ifdef SUPPORT_SECURE_BOOT
   /* FIXME is secure boot possible also with universal binaries? */
-  if (debug_secureboot || (grub_secure_mode() && grub_secure_validate ((void *)address, fsize)))
+  if (debug_secureboot || (grub_efi_get_secureboot () == GRUB_EFI_SECUREBOOT_MODE_ENABLED && grub_secure_validate ((void *)address, fsize)))
     {
       grub_file_close (file);
       grub_loader_set (grub_secureboot_chainloader_boot, grub_secureboot_chainloader_unload, 0);
