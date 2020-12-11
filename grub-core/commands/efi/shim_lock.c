@@ -24,6 +24,7 @@
 #include <grub/file.h>
 #include <grub/misc.h>
 #include <grub/verify.h>
+#include <grub/efi/sb.h>
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
