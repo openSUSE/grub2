@@ -815,7 +815,7 @@ grub_cmd_chainloader (grub_command_t cmd __attribute__ ((unused)),
 		       boot_image, fsize,
 		       &image_handle);
 #ifdef SUPPORT_SECURE_BOOT
-  if (status == GRUB_EFI_SECURITY_VIOLATION && !grub_secure_mode())
+  if (status == GRUB_EFI_SECURITY_VIOLATION && grub_efi_get_secureboot () != GRUB_EFI_SECUREBOOT_MODE_ENABLED)
     {
       /* If it failed with security violation while not in secure boot mode,
          the firmware might be broken. We try to workaround on that by forcing
