@@ -66,8 +66,6 @@ struct grub_diskfilter_pv {
   /* Optional.  */
   char *name;
   grub_disk_t disk;
-  grub_disk_addr_t part_start;
-  grub_disk_addr_t part_size;
   grub_disk_addr_t start_sector; /* Sector number where the data area starts. */
   struct grub_diskfilter_pv *next;
   /* Optional.  */

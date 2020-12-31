@@ -159,8 +159,8 @@ scan_disk_partition_iter (grub_disk_t disk, grub_partition_t p, void *data)
       for (m = arr->pvs; m; m = m->next)
 	if (m->disk && m->disk->id == disk->id
 	    && m->disk->dev->id == disk->dev->id
-	    && m->part_start == grub_partition_get_start (disk->partition)
-	    && m->part_size == grub_disk_native_sectors (disk))
+	    && grub_partition_get_start (m->disk->partition) == grub_partition_get_start (disk->partition)
+	    && grub_disk_native_sectors (m->disk) == grub_disk_native_sectors (disk))
 	  return 0;
     }
 
@@ -1303,19 +1303,20 @@ insert_array (grub_disk_t disk, const struct grub_diskfilter_pv_id *id,
 	? (grub_memcmp (pv->id.uuid, id->uuid, id->uuidlen) == 0) 
 	: (pv->id.id == id->id))
       {
+	char *part_name, *source;
 	struct grub_diskfilter_lv *lv;
 	/* FIXME: Check whether the update time of the superblocks are
 	   the same.  */
-	if (pv->disk && grub_disk_native_sectors (disk) >= pv->part_size)
+	if (pv->disk && grub_disk_native_sectors (disk) >= grub_disk_native_sectors (pv->disk))
 	  return GRUB_ERR_NONE;
-	pv->disk = grub_disk_open (disk->name);
+
+	part_name = grub_partition_get_name (disk->partition);
+	source = grub_xasprintf ("%s,%s", disk->name, part_name);
+	pv->disk = grub_disk_open (source);
+	grub_free (source);
+	grub_free (part_name);
 	if (!pv->disk)
 	  return grub_errno;
-	/* This could happen to LVM on RAID, pv->disk points to the
-	   raid device, we shouldn't change it.  */
-	pv->start_sector -= pv->part_start;
-	pv->part_start = grub_partition_get_start (disk->partition);
-	pv->part_size = grub_disk_native_sectors (disk);
 
 #ifdef GRUB_UTIL
 	{
@@ -1332,7 +1333,6 @@ insert_array (grub_disk_t disk, const struct grub_diskfilter_pv_id *id,
 #endif
 	if (start_sector != (grub_uint64_t)-1)
 	  pv->start_sector = start_sector;
-	pv->start_sector += pv->part_start;
 	/* Add the device to the array. */
 	for (lv = array->lvs; lv; lv = lv->next)
 	  if (!lv->became_readable_at && lv->fullname && is_lv_readable (lv, 0))
@@ -1420,8 +1420,8 @@ grub_diskfilter_get_pv_from_disk (grub_disk_t disk,
       {
 	if (pv->disk && pv->disk->id == disk->id
 	    && pv->disk->dev->id == disk->dev->id
-	    && pv->part_start == grub_partition_get_start (disk->partition)
-	    && pv->part_size == grub_disk_native_sectors (disk))
+	    && grub_partition_get_start (pv->disk->partition) == grub_partition_get_start (disk->partition)
+	    && grub_disk_native_sectors (pv->disk) == grub_disk_native_sectors (disk))
 	  {
 	    if (vg_out)
 	      *vg_out = vg;
