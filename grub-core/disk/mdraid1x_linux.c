@@ -208,6 +208,9 @@ grub_mdraid_detect (grub_disk_t disk,
 					 grub_le_to_cpu32 (sb.chunksize),
 					 grub_le_to_cpu32 (sb.layout),
 					 grub_le_to_cpu32 (sb.level));
+#ifdef GRUB_UTIL
+      array->mdraid1x_minor_version = minor_version;
+#endif
 
       return array;
     }

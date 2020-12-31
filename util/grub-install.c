@@ -1694,6 +1694,40 @@ main (int argc, char *argv[])
 	    }
 	}
       prefix_drive = xasprintf ("(%s)", grub_drives[0]);
+
+      if (platform == GRUB_INSTALL_PLATFORM_X86_64_EFI
+	  && grub_dev->disk
+	  && grub_dev->disk->partition
+	  && grub_fs->fs_uuid)
+	{
+	  int raid_level;
+	  char *uuid = NULL;
+	  char *escaped_relpath = NULL;
+
+	  raid_level = probe_raid_level (grub_dev->disk);
+	  if (raid_level != 1)
+	    goto out;
+
+	  escaped_relpath = escape (relative_grubdir);
+	  if (!escaped_relpath)
+	    goto out;
+
+	  if (grub_fs->fs_uuid (grub_dev, &uuid) || !uuid)
+	    {
+	      grub_print_error ();
+	      grub_errno = 0;
+	      goto out;
+	    }
+
+	  if (!load_cfg_f)
+	    load_cfg_f = grub_util_fopen (load_cfg, "wb");
+	  have_load_cfg = 1;
+	  fprintf (load_cfg_f, "search --no-floppy --fs-uuid --set=root --hint='%s' %s\n", grub_drives[0], uuid);
+	  fprintf (load_cfg_f, "set prefix=($root)'%s'\n", escaped_relpath);
+	  grub_install_push_module ("search");
+ out:
+	  grub_free (escaped_relpath);
+	}
     }
 
 #ifdef __linux__
@@ -2232,9 +2266,13 @@ main (int argc, char *argv[])
 	    {
 	      /* Try to make this image bootable using the EFI Boot Manager, if available.  */
 	      int ret;
-	      ret = grub_install_register_efi (efidir_grub_dev,
+	      grub_disk_t efidir_grub_disk[2];
+	      efidir_grub_disk[0] = efidir_grub_dev->disk;
+	      efidir_grub_disk[1] = NULL;
+	      ret = grub_install_register_efi (efidir_grub_disk,
 					       "\\System\\Library\\CoreServices",
-					       efi_distributor);
+					       efi_distributor,
+					       NULL);
 	      if (ret)
 	        grub_util_error (_("efibootmgr failed to register the boot entry: %s"),
 				 strerror (ret));
@@ -2287,7 +2325,11 @@ main (int argc, char *argv[])
 	{
 	  char * efifile_path;
 	  char * part;
+	  int raid_level;
 	  int ret;
+	  grub_disk_t *efidir_grub_disk;
+	  grub_disk_memberlist_t list = NULL, cur;
+	  char * force_disk = NULL;
 
 	  /* Try to make this image bootable using the EFI Boot Manager, if available.  */
 	  if (!efi_distributor || efi_distributor[0] == '\0')
@@ -2304,8 +2346,65 @@ main (int argc, char *argv[])
 			  efidir_grub_dev->disk->name,
 			  (part ? ",": ""), (part ? : ""));
 	  grub_free (part);
-	  ret = grub_install_register_efi (efidir_grub_dev,
-					   efifile_path, efi_distributor);
+
+	  raid_level = probe_raid_level (efidir_grub_dev->disk);
+	  if (raid_level >= 0 && raid_level != 1)
+	    grub_util_warn (_("unsupported raid level %d detected for efi system partition"), raid_level);
+	  if (raid_level == 1 && !efidir_grub_dev->disk->partition)
+	    {
+	      const char *raidname = NULL;
+
+	      if (efidir_grub_dev->disk->dev->disk_raidname)
+		raidname = efidir_grub_dev->disk->dev->disk_raidname (efidir_grub_dev->disk);
+	      if (raidname
+		  && (grub_strncmp (raidname, "mdraid09", sizeof ("mdraid09")) == 0
+		      || (grub_strcmp (raidname, "mdraid1x") == 0
+			  && ((struct grub_diskfilter_lv *) efidir_grub_dev->disk->data)->vg->mdraid1x_minor_version == 0)))
+		{
+		  if (efidir_grub_dev->disk->dev->disk_memberlist)
+		    list = efidir_grub_dev->disk->dev->disk_memberlist (efidir_grub_dev->disk);
+		}
+	      else
+		{
+		  grub_util_warn (_("this array has metadata at the start and may not be suitable as a efi system partition."
+		    " please ensure that your firmware understands md/v1.x metadata, or use --metadata=0.90"
+		    " to create the array."));
+		  /* Try to continue regardless metadata, nothing to lose here */
+		  if (efidir_grub_dev->disk->dev->disk_memberlist)
+		    list = efidir_grub_dev->disk->dev->disk_memberlist (efidir_grub_dev->disk);
+		}
+	    }
+	  else if (raid_level == 1)
+	    force_disk = grub_util_get_os_disk (install_device);
+	  if (list)
+	    {
+	      int i;
+	      int ndisk = 0;
+
+	      for (cur = list; cur; cur = cur->next)
+		++ndisk;
+	      efidir_grub_disk = xcalloc (ndisk + 1, sizeof (*efidir_grub_disk));
+	      for (cur = list, i = 0; i < ndisk; cur = cur->next, i++)
+		efidir_grub_disk[i] = cur->disk;
+	      efidir_grub_disk[ndisk] = NULL;
+	    }
+	  else
+	    {
+	      efidir_grub_disk = xcalloc (2, sizeof (*efidir_grub_disk));
+	      efidir_grub_disk[0] = efidir_grub_dev->disk;
+	      efidir_grub_disk[1] = NULL;
+	    }
+	  ret = grub_install_register_efi (efidir_grub_disk,
+					   efifile_path, efi_distributor,
+					   force_disk);
+	  while (list)
+	    {
+	      cur = list;
+	      list = list->next;
+	      grub_free (cur);
+	    }
+	  grub_free (force_disk);
+	  grub_free (efidir_grub_disk);
 	  if (ret)
 	    grub_util_error (_("efibootmgr failed to register the boot entry: %s"),
 			     strerror (ret));

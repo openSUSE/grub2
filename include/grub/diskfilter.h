@@ -49,6 +49,7 @@ struct grub_diskfilter_vg {
 
 #ifdef GRUB_UTIL
   struct grub_diskfilter *driver;
+  grub_uint8_t mdraid1x_minor_version;
 #endif
 };
 
@@ -66,8 +67,6 @@ struct grub_diskfilter_pv {
   /* Optional.  */
   char *name;
   grub_disk_t disk;
-  grub_disk_addr_t part_start;
-  grub_disk_addr_t part_size;
   grub_disk_addr_t start_sector; /* Sector number where the data area starts. */
   struct grub_diskfilter_pv *next;
   /* Optional.  */
