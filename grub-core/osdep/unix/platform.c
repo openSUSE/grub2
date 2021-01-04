@@ -138,6 +138,7 @@ grub_install_register_efi (const grub_disk_t *efidir_grub_disk,
 {
   int ret;
   const grub_disk_t *curdisk;
+  int ndev = 0;
 
   if (grub_util_exec_redirect_null ((const char * []){ "efibootmgr", "--version", NULL }))
     {
@@ -156,10 +157,14 @@ grub_install_register_efi (const grub_disk_t *efidir_grub_disk,
     return ret;
 
   for (curdisk = efidir_grub_disk; *curdisk; curdisk++)
+    ndev++;
+
+  for (curdisk = efidir_grub_disk; *curdisk; curdisk++)
     {
       const char * efidir_disk;
       int efidir_part;
       char *efidir_part_str;
+      char *new_efi_distributor = NULL;
       grub_disk_t disk = *curdisk;
 
       efidir_disk = grub_util_biosdisk_get_osdev (disk);
@@ -168,20 +173,29 @@ grub_install_register_efi (const grub_disk_t *efidir_grub_disk,
 
       efidir_part = disk->partition ? disk->partition->number + 1 : 1;
       efidir_part_str = xasprintf ("%d", efidir_part);
+      if (ndev > 1)
+	{
+	  const char *p = grub_strrchr (efidir_disk, '/');
+	  new_efi_distributor = xasprintf ("%s (%s%d)\n",
+			efi_distributor,
+			p ? p + 1: efidir_disk,
+			efidir_part);
+	}
 
       if (!verbosity)
 	ret = grub_util_exec ((const char * []){ "efibootmgr", "-q",
 	  "-c", "-d", efidir_disk,
 	  "-p", efidir_part_str, "-w",
-	  "-L", efi_distributor, "-l", 
+	  "-L", new_efi_distributor ? : efi_distributor, "-l",
 	  efifile_path, NULL });
       else
 	ret = grub_util_exec ((const char * []){ "efibootmgr",
 	  "-c", "-d", efidir_disk,
 	  "-p", efidir_part_str, "-w",
-	  "-L", efi_distributor, "-l", 
+	  "-L", new_efi_distributor ? : efi_distributor, "-l",
 	  efifile_path, NULL });
       free (efidir_part_str);
+      free (new_efi_distributor);
       if (ret)
 	return ret;
     }
