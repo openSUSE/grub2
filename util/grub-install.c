@@ -2163,6 +2163,7 @@ main (int argc, char *argv[])
 	  char * efifile_path;
 	  char * part;
 	  int ret;
+	  grub_disk_t *efidir_grub_disk;
 
 	  /* Try to make this image bootable using the EFI Boot Manager, if available.  */
 	  if (!efi_distributor || efi_distributor[0] == '\0')
@@ -2179,11 +2180,35 @@ main (int argc, char *argv[])
 			  efidir_grub_dev->disk->name,
 			  (part ? ",": ""), (part ? : ""));
 	  grub_free (part);
-	  grub_disk_t efidir_grub_disk[2];
-	  efidir_grub_disk[0] = efidir_grub_dev->disk;
-	  efidir_grub_disk[1] = NULL;
+	  if (efidir_grub_dev->disk->dev->disk_memberlist && probe_raid_level (efidir_grub_dev->disk) == 1)
+	    {
+	      grub_disk_memberlist_t list, cur;
+	      int i;
+	      int ndisk = 0;
+
+	      list = efidir_grub_dev->disk->dev->disk_memberlist (efidir_grub_dev->disk);
+	      for (cur = list; cur; cur = cur->next)
+		++ndisk;
+	      efidir_grub_disk = xcalloc (ndisk + 1, sizeof (*efidir_grub_disk));
+	      for (cur = list, i = 0; i < ndisk; cur = cur->next, i++)
+		efidir_grub_disk[i] = cur->disk;
+	      efidir_grub_disk[ndisk] = NULL;
+	      while (list)
+		{
+		  cur = list;
+		  list = list->next;
+		  grub_free (cur);
+		}
+	    }
+	  else
+	    {
+	      efidir_grub_disk = xcalloc (2, sizeof (*efidir_grub_disk));
+	      efidir_grub_disk[0] = efidir_grub_dev->disk;
+	      efidir_grub_disk[1] = NULL;
+	    }
 	  ret = grub_install_register_efi (efidir_grub_disk,
 					   efifile_path, efi_distributor);
+	  grub_free (efidir_grub_disk);
 	  if (ret)
 	    grub_util_error (_("efibootmgr failed to register the boot entry: %s"),
 			     strerror (ret));
