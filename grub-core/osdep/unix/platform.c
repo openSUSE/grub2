@@ -132,15 +132,12 @@ grub_install_remove_efi_entries_by_distributor (const char *efi_distributor)
 }
 
 int
-grub_install_register_efi (grub_device_t efidir_grub_dev,
+grub_install_register_efi (const grub_disk_t *efidir_grub_disk,
 			   const char *efifile_path,
 			   const char *efi_distributor)
 {
-  const char * efidir_disk;
-  int efidir_part;
   int ret;
-  efidir_disk = grub_util_biosdisk_get_osdev (efidir_grub_dev->disk);
-  efidir_part = efidir_grub_dev->disk->partition ? efidir_grub_dev->disk->partition->number + 1 : 1;
+  const grub_disk_t *curdisk;
 
   if (grub_util_exec_redirect_null ((const char * []){ "efibootmgr", "--version", NULL }))
     {
@@ -158,22 +155,37 @@ grub_install_register_efi (grub_device_t efidir_grub_dev,
   if (ret)
     return ret;
 
-  char *efidir_part_str = xasprintf ("%d", efidir_part);
+  for (curdisk = efidir_grub_disk; *curdisk; curdisk++)
+    {
+      const char * efidir_disk;
+      int efidir_part;
+      char *efidir_part_str;
+      grub_disk_t disk = *curdisk;
 
-  if (!verbosity)
-    ret = grub_util_exec ((const char * []){ "efibootmgr", "-q",
+      efidir_disk = grub_util_biosdisk_get_osdev (disk);
+      if (!efidir_disk)
+	grub_util_error (_("%s: no device for efi"), disk->name);
+
+      efidir_part = disk->partition ? disk->partition->number + 1 : 1;
+      efidir_part_str = xasprintf ("%d", efidir_part);
+
+      if (!verbosity)
+	ret = grub_util_exec ((const char * []){ "efibootmgr", "-q",
 	  "-c", "-d", efidir_disk,
 	  "-p", efidir_part_str, "-w",
 	  "-L", efi_distributor, "-l", 
 	  efifile_path, NULL });
-  else
-    ret = grub_util_exec ((const char * []){ "efibootmgr",
+      else
+	ret = grub_util_exec ((const char * []){ "efibootmgr",
 	  "-c", "-d", efidir_disk,
 	  "-p", efidir_part_str, "-w",
 	  "-L", efi_distributor, "-l", 
 	  efifile_path, NULL });
-  free (efidir_part_str);
-  return ret;
+      free (efidir_part_str);
+      if (ret)
+	return ret;
+    }
+  return 0;
 }
 
 void
