@@ -2124,7 +2124,10 @@ main (int argc, char *argv[])
 	    {
 	      /* Try to make this image bootable using the EFI Boot Manager, if available.  */
 	      int ret;
-	      ret = grub_install_register_efi (efidir_grub_dev,
+	      grub_disk_t efidir_grub_disk[2];
+	      efidir_grub_disk[0] = efidir_grub_dev->disk;
+	      efidir_grub_disk[1] = NULL;
+	      ret = grub_install_register_efi (efidir_grub_disk,
 					       "\\System\\Library\\CoreServices",
 					       efi_distributor);
 	      if (ret)
@@ -2176,7 +2179,10 @@ main (int argc, char *argv[])
 			  efidir_grub_dev->disk->name,
 			  (part ? ",": ""), (part ? : ""));
 	  grub_free (part);
-	  ret = grub_install_register_efi (efidir_grub_dev,
+	  grub_disk_t efidir_grub_disk[2];
+	  efidir_grub_disk[0] = efidir_grub_dev->disk;
+	  efidir_grub_disk[1] = NULL;
+	  ret = grub_install_register_efi (efidir_grub_disk,
 					   efifile_path, efi_distributor);
 	  if (ret)
 	    grub_util_error (_("efibootmgr failed to register the boot entry: %s"),

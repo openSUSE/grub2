@@ -218,7 +218,7 @@ const char *
 grub_install_get_default_x86_platform (void);
 
 int
-grub_install_register_efi (grub_device_t efidir_grub_dev,
+grub_install_register_efi (const grub_disk_t *efidir_grub_disk,
 			   const char *efifile_path,
 			   const char *efi_distributor);
 
