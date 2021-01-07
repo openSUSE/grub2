@@ -1303,17 +1303,20 @@ insert_array (grub_disk_t disk, const struct grub_diskfilter_pv_id *id,
 	? (grub_memcmp (pv->id.uuid, id->uuid, id->uuidlen) == 0) 
 	: (pv->id.id == id->id))
       {
-	char *part_name, *source;
+	char *part_name = NULL;
 	struct grub_diskfilter_lv *lv;
 	/* FIXME: Check whether the update time of the superblocks are
 	   the same.  */
 	if (pv->disk && grub_disk_native_sectors (disk) >= grub_disk_native_sectors (pv->disk))
 	  return GRUB_ERR_NONE;
-
-	part_name = grub_partition_get_name (disk->partition);
-	source = grub_xasprintf ("%s,%s", disk->name, part_name);
-	pv->disk = grub_disk_open (source);
-	grub_free (source);
+	if (disk->partition)
+	  {
+	    char *p = grub_partition_get_name (disk->partition);
+	    if (p)
+	      part_name = grub_xasprintf ("%s,%s", disk->name, p);
+	    grub_free (p);
+	  }
+	pv->disk = grub_disk_open (part_name ? : disk->name);
 	grub_free (part_name);
 	if (!pv->disk)
 	  return grub_errno;
