@@ -2192,7 +2192,10 @@ main (int argc, char *argv[])
 
 	      if (efidir_grub_dev->disk->dev->disk_raidname)
 		raidname = efidir_grub_dev->disk->dev->disk_raidname (efidir_grub_dev->disk);
-	      if (raidname && grub_strncmp (raidname, "mdraid09", sizeof ("mdraid09")) == 0)
+	      if (raidname
+		  && (grub_strncmp (raidname, "mdraid09", sizeof ("mdraid09")) == 0
+		      || (grub_strcmp (raidname, "mdraid1x") == 0
+			  && ((struct grub_diskfilter_lv *) efidir_grub_dev->disk->data)->vg->mdraid1x_minor_version == 0)))
 		{
 		  if (efidir_grub_dev->disk->dev->disk_memberlist)
 		    list = efidir_grub_dev->disk->dev->disk_memberlist (efidir_grub_dev->disk);

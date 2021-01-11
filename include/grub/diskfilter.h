@@ -49,6 +49,7 @@ struct grub_diskfilter_vg {
 
 #ifdef GRUB_UTIL
   struct grub_diskfilter *driver;
+  grub_uint8_t mdraid1x_minor_version;
 #endif
 };
 
