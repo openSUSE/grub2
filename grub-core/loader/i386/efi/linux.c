@@ -283,8 +283,11 @@ grub_cmd_linux (grub_command_t cmd __attribute__ ((unused)),
 				       BYTES_TO_PAGES(lh.init_size));
 
   if (!kernel_mem)
-    kernel_mem = grub_efi_allocate_pages_max(0x3fffffff,
+    {
+      grub_errno = GRUB_ERR_NONE;
+      kernel_mem = grub_efi_allocate_pages_max(0x3fffffff,
 					     BYTES_TO_PAGES(lh.init_size));
+    }
 
   if (!kernel_mem)
     {
