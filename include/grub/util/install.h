@@ -281,4 +281,7 @@ grub_install_is_short_mbrgap_supported (void);
 
 int
 grub_install_sync_fs_journal (const char *path);
+
+const char *
+grub_install_efi_removable_fallback (const char *efidir, enum grub_install_plat platform);
 #endif
