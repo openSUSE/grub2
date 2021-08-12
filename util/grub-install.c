@@ -1482,6 +1482,26 @@ main (int argc, char *argv[])
 	}
     }
 
+  if (install_drive
+      && platform == GRUB_INSTALL_PLATFORM_I386_PC
+      && grub_strcmp (grub_fs->name, "btrfs") == 0)
+    {
+      char *mod;
+      mod = grub_util_path_concat (2, grub_install_source_directory, "btrfs_zstd.mod");
+      if (grub_util_is_regular (mod))
+	{
+          unsigned int nsec = GRUB_MIN_RECOMMENDED_MBR_GAP;
+	  int ret = grub_util_try_partmap_embed (install_drive, &nsec);
+	  if (ret == 0)
+	    grub_install_push_module ("btrfs_zstd");
+	  else if (ret == 1)
+	    grub_util_warn ("%s", _("btrfs zstd compression is disabled, please change install device to disk"));
+	  else
+	    grub_util_warn ("%s", _("btrfs zstd compression is disabled due to not enough space to embed image"));
+	}
+      grub_free (mod);
+    }
+
   if (!have_abstractions)
     {
       if ((disk_module && grub_strcmp (disk_module, "biosdisk") != 0)

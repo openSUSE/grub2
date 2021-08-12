@@ -176,6 +176,7 @@ library = {
   common = grub-core/lib/zstd/xxhash.c;
   common = grub-core/lib/zstd/zstd_common.c;
   common = grub-core/lib/zstd/zstd_decompress.c;
+  common = grub-core/lib/zstd.c;
 };
 
 program = {

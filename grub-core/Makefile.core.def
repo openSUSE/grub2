@@ -1370,8 +1370,19 @@ module = {
   name = btrfs;
   common = fs/btrfs.c;
   common = lib/crc.c;
+  nopc = lib/zstd.c;
   cflags = '$(CFLAGS_POSIX) -Wno-undef';
+  i386_pc_cppflags = '-I$(srcdir)/lib/posix_wrap -I$(srcdir)/lib/minilzo -DMINILZO_HAVE_CONFIG_H';
   cppflags = '-I$(srcdir)/lib/posix_wrap -I$(srcdir)/lib/minilzo -I$(srcdir)/lib/zstd -DMINILZO_HAVE_CONFIG_H';
+};
+
+module = {
+  name = btrfs_zstd;
+  common = fs/btrfs_zstd.c;
+  common = lib/zstd.c;
+  cflags = '$(CFLAGS_POSIX) -Wno-undef';
+  cppflags = '-I$(srcdir)/lib/posix_wrap -I$(srcdir)/lib/zstd';
+  enable = i386_pc;
 };
 
 module = {
