@@ -242,6 +242,49 @@ identify_partmap (grub_disk_t disk __attribute__ ((unused)),
 }
 
 #ifdef GRUB_SETUP_BIOS
+int
+grub_util_try_partmap_embed (const char *dest, unsigned int *nsec)
+{
+  grub_device_t dest_dev;
+
+  dest_dev = grub_device_open (dest);
+  if (! dest_dev)
+    grub_util_error ("%s", grub_errmsg);
+
+  struct identify_partmap_ctx ctx = {
+    .dest_partmap = NULL,
+    .container = dest_dev->disk->partition,
+    .multiple_partmaps = 0
+  };
+
+  grub_partition_iterate (dest_dev->disk, identify_partmap, &ctx);
+
+  if (ctx.dest_partmap && ctx.dest_partmap->embed)
+    {
+      grub_err_t err;
+
+      grub_disk_addr_t *sectors = NULL;
+
+      err = ctx.dest_partmap->embed (dest_dev->disk, nsec, *nsec,
+			GRUB_EMBED_PCBIOS, &sectors, 0);
+      if (err)
+	{
+	  grub_errno = GRUB_ERR_NONE;
+          goto no_embed;
+	}
+      grub_free (sectors);
+      return 0;
+    }
+
+no_embed:
+  grub_device_close (dest_dev);
+  if (ctx.container)
+    return 1;
+  return 2;
+}
+#endif
+
+#ifdef GRUB_SETUP_BIOS
 #define SETUP grub_util_bios_setup
 #elif GRUB_SETUP_SPARC64
 #define SETUP grub_util_sparc_setup

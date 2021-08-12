@@ -208,6 +208,8 @@ grub_util_sparc_setup (const char *dir,
 		       const char *dest, int force,
 		       int fs_probe, int allow_floppy,
 		       int add_rs_codes, int warn_short_mbr_gap);
+int
+grub_util_try_partmap_embed (const char *dest, unsigned int *nsec);
 
 char *
 grub_install_get_image_targets_string (void);
