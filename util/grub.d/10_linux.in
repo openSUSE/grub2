@@ -307,7 +307,7 @@ while [ "x$list" != "x" ] ; do
   fi
 
   config=
-  for i in "${dirname}/config-${version}" "${dirname}/config-${alt_version}" "/etc/kernels/kernel-config-${version}" ; do
+  for i in "${dirname}/config-${version}" "${dirname}/config-${alt_version}" "/etc/kernels/kernel-config-${version}" "/usr/lib/modules/${version}/config" ; do
     if test -e "${i}" ; then
       config="${i}"
       break
