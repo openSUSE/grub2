@@ -1834,6 +1834,7 @@ module = {
   riscv64 = loader/riscv/linux.c;
   emu = loader/emu/linux.c;
   common = loader/linux.c;
+  efi = loader/efi/linux.c;
 };
 
 module = {
