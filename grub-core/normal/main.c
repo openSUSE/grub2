@@ -373,7 +373,16 @@ grub_try_normal_prefix (const char *prefix)
       }
 
     if (err == GRUB_ERR_NONE)
-      grub_enter_normal_mode (config);
+      {
+	char *device_name;
+
+	device_name = grub_file_get_device_name (prefix);
+	if (grub_errno)
+	  return grub_errno;
+	grub_env_set ("root", device_name);
+	grub_free (device_name);
+	grub_enter_normal_mode (config);
+      }
 
     grub_errno = 0;
     grub_free (config);
