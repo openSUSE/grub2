@@ -437,7 +437,7 @@ grub_cmd_normal (struct grub_command *cmd __attribute__ ((unused)),
       /* Guess the config filename. It is necessary to make CONFIG static,
 	 so that it won't get broken by longjmp.  */
       grub_err_t err;
-      err = grub_try_normal ("fw_path");
+      err = grub_try_normal ("cmdpath");
       if (err == GRUB_ERR_FILE_NOT_FOUND)
         err = grub_try_normal ("prefix");
       if (err == GRUB_ERR_FILE_NOT_FOUND)
