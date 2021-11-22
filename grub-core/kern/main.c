@@ -211,7 +211,6 @@ grub_set_prefix_and_root (void)
     {
       char *prefix_set;
 
-#ifdef __powerpc__
       /* We have to be careful here on powerpc-ieee1275 + signed grub. We
 	 will have signed something with a prefix that doesn't have a device
 	 because we cannot know in advance what partition we're on.
@@ -246,7 +245,6 @@ grub_set_prefix_and_root (void)
       if (grub_strchr (device, ',') == NULL)
         grub_env_set ("prefix", path);
       else
-#endif
 	{
 	  prefix_set = grub_xasprintf ("(%s)%s", device, path ? : "");
 	  if (prefix_set)
