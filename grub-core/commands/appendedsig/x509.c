@@ -547,7 +547,7 @@ cleanup:
 
 /*
  * Verify the Key Usage extension.
- * We only permit the Digital signature usage.
+ * We require the Digital signature usage.
  */
 static grub_err_t
 verify_key_usage (grub_uint8_t *value, int value_size)
@@ -586,10 +586,10 @@ verify_key_usage (grub_uint8_t *value, int value_size)
       goto cleanup;
     }
 
-  if (usage != digitalSignatureUsage)
+  if (!(usage & digitalSignatureUsage))
     {
       err =
-	grub_error (GRUB_ERR_BAD_FILE_TYPE, "Unexpected Key Usage value: %x",
+	grub_error (GRUB_ERR_BAD_FILE_TYPE, "Key Usage (0x%x) missing Digital Signature usage",
 		    usage);
       goto cleanup;
     }
