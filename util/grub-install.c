@@ -321,10 +321,10 @@ static struct argp_option options[] = {
   {"suse-enable-tpm", OPTION_SUSE_ENABLE_TPM, 0, 0, N_("install TPM modules"), 0},
   {"suse-force-signed", OPTION_SUSE_FORCE_SIGNED, 0, 0,
    N_("force installation of signed grub" "%s."
-      "This option is only available on ARM64 EFI targets."), 0},
+      "This option is only available on ARM64 EFI and powerpc targets."), 0},
   {"suse-inhibit-signed", OPTION_SUSE_INHIBIT_SIGNED, 0, 0,
    N_("inhibit installation of signed grub. "
-      "This option is only available on ARM64 EFI targets."), 0},
+      "This option is only available on ARM64 EFI and powerpc targets."), 0},
   {"debug", OPTION_DEBUG, 0, OPTION_HIDDEN, 0, 2},
   {"no-floppy", OPTION_NO_FLOPPY, 0, OPTION_HIDDEN, 0, 2},
   {"debug-image", OPTION_DEBUG_IMAGE, N_("STRING"), OPTION_HIDDEN, 0, 2},
@@ -1724,6 +1724,7 @@ main (int argc, char *argv[])
   char mkimage_target[200];
   const char *core_name = NULL;
   char *signed_imgfile = NULL;
+  int ppc_sb_state = -1;
 
   switch (platform)
     {
@@ -1770,11 +1771,33 @@ main (int argc, char *argv[])
 		grub_install_get_platform_platform (platform));
       break;
 
+
+    case GRUB_INSTALL_PLATFORM_POWERPC_IEEE1275:
+      ppc_sb_state = grub_install_get_powerpc_secure_boot();
+
+      if ((signed_grub_mode >= SIGNED_GRUB_FORCE) || ((signed_grub_mode == SIGNED_GRUB_AUTO) && (ppc_sb_state > 0)))
+	{
+	  signed_imgfile = grub_util_path_concat (2, grub_install_source_directory, "grub.elf");
+	  if (!grub_util_is_regular (signed_imgfile))
+	    {
+	      if ((signed_grub_mode >= SIGNED_GRUB_FORCE) || (ppc_sb_state > 1))
+		grub_util_error ("signed image `%s' does not exist\n", signed_imgfile);
+	      else
+		{
+		  free (signed_imgfile);
+		  signed_imgfile = NULL;
+		}
+	    }
+	}
+
+      if (signed_imgfile)
+	fprintf (stderr, _("Use signed file in %s for installation.\n"), signed_imgfile);
+
+      /* fallthrough.  */
     case GRUB_INSTALL_PLATFORM_I386_COREBOOT:
     case GRUB_INSTALL_PLATFORM_ARM_COREBOOT:
     case GRUB_INSTALL_PLATFORM_I386_MULTIBOOT:
     case GRUB_INSTALL_PLATFORM_I386_IEEE1275:
-    case GRUB_INSTALL_PLATFORM_POWERPC_IEEE1275:
     case GRUB_INSTALL_PLATFORM_I386_XEN:
     case GRUB_INSTALL_PLATFORM_X86_64_XEN:
     case GRUB_INSTALL_PLATFORM_I386_XEN_PVH:
