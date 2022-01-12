@@ -154,3 +154,16 @@ grub_install_get_default_x86_platform (void)
   grub_util_info ("... not found");
   return "i386-pc";
 }
+
+int
+grub_install_get_powerpc_secure_boot (void)
+{
+  int32_t ret = -1;
+  FILE *fp = grub_util_fopen ("/proc/device-tree/ibm,secure-boot", "rb");
+  if (fp) {
+    if (fread (&ret , 1, sizeof(ret), fp) > 0)
+      ret = grub_be_to_cpu32(ret);
+    fclose(fp);
+  }
+  return ret;
+}
