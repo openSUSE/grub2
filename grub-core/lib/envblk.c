@@ -23,6 +23,18 @@
 #include <grub/mm.h>
 #include <grub/lib/envblk.h>
 
+char *
+grub_envblk_buf (grub_size_t size)
+{
+  char *buf;
+
+  buf = grub_malloc (size);
+  grub_memcpy (buf, GRUB_ENVBLK_SIGNATURE, sizeof (GRUB_ENVBLK_SIGNATURE) - 1);
+  grub_memset (buf + sizeof (GRUB_ENVBLK_SIGNATURE) - 1, '#', size - sizeof (GRUB_ENVBLK_SIGNATURE) + 1);
+
+  return buf;
+}
+
 grub_envblk_t
 grub_envblk_open (char *buf, grub_size_t size)
 {

@@ -210,9 +210,7 @@ create_envblk_fs (void)
   if (! fp)
     grub_util_error (_("cannot open `%s': %s"), device, strerror (errno));
 
-  buf = xmalloc (size);
-  memcpy (buf, GRUB_ENVBLK_SIGNATURE, sizeof (GRUB_ENVBLK_SIGNATURE) - 1);
-  memset (buf + sizeof (GRUB_ENVBLK_SIGNATURE) - 1, '#', size - sizeof (GRUB_ENVBLK_SIGNATURE) + 1);
+  buf = grub_envblk_buf (size);
 
   if (fseek (fp, offset, SEEK_SET) < 0)
     grub_util_error (_("cannot seek `%s': %s"), device, strerror (errno));
