@@ -31,6 +31,7 @@ struct grub_envblk
 };
 typedef struct grub_envblk *grub_envblk_t;
 
+char *grub_envblk_buf (grub_size_t size);
 grub_envblk_t grub_envblk_open (char *buf, grub_size_t size);
 int grub_envblk_set (grub_envblk_t envblk, const char *name, const char *value);
 void grub_envblk_delete (grub_envblk_t envblk, const char *name);
