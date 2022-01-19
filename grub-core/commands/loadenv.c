@@ -442,7 +442,159 @@ grub_cmd_save_env (grub_extcmd_context_t ctxt, int argc, char **args)
   return grub_errno;
 }
 
+#if defined(__powerpc__) && defined(GRUB_MACHINE_IEEE1275)
+
+#include <grub/gpt_partition.h>
+
+static int
+is_prep_partition (grub_device_t dev)
+{
+  if (!dev->disk)
+    return 0;
+  if (!dev->disk->partition)
+    return 0;
+  if (grub_strcmp (dev->disk->partition->partmap->name, "msdos") == 0)
+    return (dev->disk->partition->msdostype == 0x41);
+
+  if (grub_strcmp (dev->disk->partition->partmap->name, "gpt") == 0)
+    {
+      struct grub_gpt_partentry gptdata;
+      grub_partition_t p = dev->disk->partition;
+      int ret = 0;
+      dev->disk->partition = dev->disk->partition->parent;
+
+      if (grub_disk_read (dev->disk, p->offset, p->index,
+			  sizeof (gptdata), &gptdata) == 0)
+	{
+	  const grub_gpt_part_guid_t template = {
+	    grub_cpu_to_le32_compile_time (0x9e1a2d38),
+	    grub_cpu_to_le16_compile_time (0xc612),
+	    grub_cpu_to_le16_compile_time (0x4316),
+	    { 0xaa, 0x26, 0x8b, 0x49, 0x52, 0x1e, 0x5a, 0x8b }
+	  };
+
+	  ret = grub_memcmp (&template, &gptdata.type,
+			     sizeof (template)) == 0;
+	}
+      dev->disk->partition = p;
+      return ret;
+    }
+
+  return 0;
+}
+
+static int
+part_hook (grub_disk_t disk, const grub_partition_t partition, void *data)
+{
+  char **ret = data;
+  char *partition_name, *devname;
+  grub_device_t dev;
+
+  partition_name = grub_partition_get_name (partition);
+  if (! partition_name)
+    return 2;
+
+  devname = grub_xasprintf ("%s,%s", disk->name, partition_name);
+  grub_free (partition_name);
+  if (!devname)
+    return 2;
+
+  dev = grub_device_open (devname);
+  if (!dev)
+    {
+      grub_free (devname);
+      return 2;
+    }
+  if (is_prep_partition (dev))
+    {
+      *ret = devname;
+      return 1;
+    }
+  grub_free (devname);
+  grub_device_close (dev);
+  return 0;
+}
+
+static grub_err_t
+prep_read_envblk (const char *devname)
+{
+  char *buf = NULL;
+  grub_device_t dev = NULL;
+  grub_envblk_t envblk = NULL;
+
+  dev = grub_device_open (devname);
+  if (!dev)
+    return grub_errno;
+
+  if (!dev->disk || !dev->disk->partition)
+    {
+      grub_error (GRUB_ERR_BAD_DEVICE, "disk device required");
+      goto fail;
+    }
+
+  buf = grub_malloc (GRUB_ENVBLK_PREP_SIZE);
+  if (!buf)
+    goto fail;
+
+  if (grub_disk_read (dev->disk, dev->disk->partition->len - (GRUB_ENVBLK_PREP_SIZE >> GRUB_DISK_SECTOR_BITS), 0, GRUB_ENVBLK_PREP_SIZE, buf))
+    goto fail;
+
+  envblk = grub_envblk_open (buf, GRUB_ENVBLK_PREP_SIZE);
+  if (!envblk)
+    {
+      grub_error (GRUB_ERR_BAD_FILE_TYPE, "invalid environment block");
+      goto fail;
+    }
+  grub_envblk_iterate (envblk, NULL, set_var);
+
+ fail:
+  if (envblk)
+    grub_envblk_close (envblk);
+  else
+    grub_free (buf);
+  if (dev)
+    grub_device_close (dev);
+  return grub_errno;
+}
+
+static grub_err_t
+grub_cmd_prep_loadenv (grub_command_t cmd __attribute__ ((unused)),
+		       int argc,
+		       char **argv)
+{
+  char *devname, *prep = NULL;
+  int ret;
+  grub_device_t dev;
+
+  if (argc < 1)
+    return grub_error (GRUB_ERR_BAD_ARGUMENT, "device name required");
+
+  devname = grub_file_get_device_name(argv[0]);
+  if (!devname)
+    return grub_errno;
+  dev = grub_device_open (devname);
+  grub_free (devname);
+  if (!dev)
+    return grub_errno;
+
+  ret = grub_partition_iterate (dev->disk, part_hook, &prep);
+
+  if (ret == 1 && prep)
+    {
+      grub_printf ("prep is %s\n", prep);
+      prep_read_envblk (prep);
+    }
+  else if (ret == 0 && grub_errno == GRUB_ERR_NONE)
+    grub_error (GRUB_ERR_FILE_NOT_FOUND, "no prep partition");
+
+  return grub_errno;
+}
+#endif
+
 static grub_extcmd_t cmd_load, cmd_list, cmd_save;
+#if defined(__powerpc__) && defined(GRUB_MACHINE_IEEE1275)
+static grub_command_t cmd_prep_load;
+#endif
 
 GRUB_MOD_INIT(loadenv)
 {
@@ -460,6 +612,12 @@ GRUB_MOD_INIT(loadenv)
 			  N_("[-f FILE] variable_name [...]"),
 			  N_("Save variables to environment block file."),
 			  options);
+#if defined(__powerpc__) && defined(GRUB_MACHINE_IEEE1275)
+  cmd_prep_load =
+    grub_register_command("prep_load_env", grub_cmd_prep_loadenv,
+			  "DEVICE",
+			  N_("Load variables from environment block file."));
+#endif
 }
 
 GRUB_MOD_FINI(loadenv)
@@ -467,4 +625,7 @@ GRUB_MOD_FINI(loadenv)
   grub_unregister_extcmd (cmd_load);
   grub_unregister_extcmd (cmd_list);
   grub_unregister_extcmd (cmd_save);
+#if defined(__powerpc__) && defined(GRUB_MACHINE_IEEE1275)
+  grub_unregister_command (cmd_prep_load);
+#endif
 }
