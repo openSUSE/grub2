@@ -43,6 +43,7 @@
 #include <grub/util/ofpath.h>
 #include <grub/hfsplus.h>
 #include <grub/time.h>
+#include <grub/lib/envblk.h>
 
 #include <string.h>
 
@@ -2111,6 +2112,43 @@ main (int argc, char *argv[])
 	  if (write_to_disk (ins_dev, imgfile))
 	    {
 	      grub_util_error ("%s", _("failed to copy Grub to the PReP partition"));
+	    }
+
+	  if ((signed_grub_mode >= SIGNED_GRUB_FORCE) || ((signed_grub_mode == SIGNED_GRUB_AUTO) && (ppc_sb_state > 0)))
+	    {
+	      char *uuid = NULL;
+	      const char *cryptouuid = NULL;
+	      grub_envblk_t envblk = NULL;
+	      char *buf;
+
+	      /* TODO: Add LVM/RAID on encrypted partitions */
+	      if (grub_dev->disk && grub_dev->disk->dev->id == GRUB_DISK_DEVICE_CRYPTODISK_ID)
+		cryptouuid = grub_util_cryptodisk_get_uuid (grub_dev->disk);
+	      if (grub_fs->fs_uuid && grub_fs->fs_uuid (grub_dev, &uuid))
+		{
+		  grub_print_error ();
+		  grub_errno = 0;
+		  uuid = NULL;
+		}
+	      buf = grub_envblk_buf (GRUB_ENVBLK_PREP_SIZE);
+	      envblk = grub_envblk_open (buf, GRUB_ENVBLK_PREP_SIZE);
+	      if (uuid)
+		grub_envblk_set (envblk, "ENV_FS_UUID", uuid);
+	      if (cryptouuid)
+		grub_envblk_set (envblk, "ENV_CRYPTO_UUID", cryptouuid);
+	      if (relative_grubdir)
+		grub_envblk_set (envblk, "ENV_GRUB_DIR", relative_grubdir);
+	      if (have_abstractions)
+		grub_envblk_set (envblk, "ENV_HINT", grub_dev->disk->name);
+	      if (use_relative_path_on_btrfs)
+		grub_envblk_set (envblk, "btrfs_relative_path", "1");
+	      if (envblk)
+		{
+		  fprintf (stderr, _("Write environment block to PReP.\n"));
+		  if (grub_disk_write_tail (ins_dev->disk, envblk->size, envblk->buf))
+		    grub_util_error ("%s", _("failed to write environment block to the PReP partition"));
+		}
+	      grub_envblk_close (envblk);
 	    }
 	  grub_device_close (ins_dev);
 	  if (update_nvram)

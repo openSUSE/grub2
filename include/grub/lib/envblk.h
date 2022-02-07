@@ -24,6 +24,9 @@
 
 #ifndef ASM_FILE
 
+#include <grub/disk.h>
+#define GRUB_ENVBLK_PREP_SIZE (GRUB_DISK_SECTOR_SIZE << 3)
+
 struct grub_envblk
 {
   char *buf;
