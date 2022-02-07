@@ -232,6 +232,9 @@ grub_err_t EXPORT_FUNC(grub_disk_read) (grub_disk_t disk,
 					grub_off_t offset,
 					grub_size_t size,
 					void *buf);
+grub_err_t grub_disk_write_tail (grub_disk_t disk,
+			       grub_size_t size,
+			       const void *buf);
 grub_err_t grub_disk_write (grub_disk_t disk,
 			    grub_disk_addr_t sector,
 			    grub_off_t offset,

@@ -52,6 +52,24 @@ grub_disk_cache_invalidate (unsigned long dev_id, unsigned long disk_id,
 }
 
 grub_err_t
+grub_disk_write_tail (grub_disk_t disk, grub_size_t size, const void *buf)
+{
+  grub_partition_t part;
+  grub_disk_addr_t sector;
+  grub_off_t offset;
+
+  if (!disk->partition)
+    return GRUB_ERR_NONE;
+
+  part = disk->partition;
+  sector = part->len;
+  sector -= (size + GRUB_DISK_SECTOR_SIZE - 1) >> GRUB_DISK_SECTOR_BITS;
+  offset = size & (GRUB_DISK_SECTOR_SIZE - 1);
+
+  return grub_disk_write (disk, sector, offset, size, buf);
+}
+
+grub_err_t
 grub_disk_write (grub_disk_t disk, grub_disk_addr_t sector,
 		 grub_off_t offset, grub_size_t size, const void *buf)
 {
