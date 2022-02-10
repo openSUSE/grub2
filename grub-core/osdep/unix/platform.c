@@ -250,3 +250,37 @@ grub_install_zipl (const char *dest, int install, int force)
 	"-z", dest, NULL }))
     grub_util_error (_("`%s' failed.\n"), PACKAGE"-zipl-setup");
 }
+
+char *
+grub_install_get_filesystem (const char *path)
+{
+  int fd;
+  pid_t pid;
+  FILE *fp;
+  ssize_t len;
+  char *buf = NULL;
+  size_t bufsz = 0;
+
+  pid = grub_util_exec_pipe ((const char * []){ "stat", "-f", "-c", "%T", path, NULL }, &fd);
+  if (!pid)
+    return NULL;
+
+  fp = fdopen (fd, "r");
+  if (!fp)
+    return NULL;
+
+  len = getline (&buf, &bufsz, fp);
+  if (len == -1)
+    {
+      free (buf);
+      fclose (fp);
+      return NULL;
+    }
+
+  fclose (fp);
+
+  if (len > 0 && buf[len - 1] == '\n')
+    buf[len - 1] = '\0';
+
+  return buf;
+}

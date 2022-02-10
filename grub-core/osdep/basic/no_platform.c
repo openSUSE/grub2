@@ -51,3 +51,8 @@ grub_install_zipl (const char *d, int i, int f)
   grub_util_error ("%s", _("no zIPL routines are available for your platform"));
 }
 
+char *
+grub_install_get_filesystem (const char *path)
+{
+  return NULL;
+}

@@ -252,6 +252,9 @@ grub_install_sgi_setup (const char *install_device,
 void
 grub_install_zipl (const char *d, int i, int f);
 
+char *
+grub_install_get_filesystem (const char *path);
+
 int 
 grub_install_compress_gzip (const char *src, const char *dest);
 int 

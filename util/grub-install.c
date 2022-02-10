@@ -871,7 +871,6 @@ main (int argc, char *argv[])
   const char *efi_file = NULL;
   char **grub_devices;
   grub_fs_t grub_fs;
-  grub_fs_t root_fs;
   grub_device_t grub_dev = NULL;
   enum grub_install_plat platform;
   char *grubdir, *device_map;
@@ -1049,8 +1048,10 @@ main (int argc, char *argv[])
   grub_host_init ();
 
   {
-    char *rootdir_grub_devname;
-    grub_device_t rootdir_grub_dev;
+    grub_device_t rootdir_grub_dev = NULL;
+    char *rootdir_grub_devname = NULL;
+    char *root_fs_name = NULL;
+
     char *t = grub_util_path_concat (2, "/", rootdir);
 
     rootdir_path = grub_canonicalize_file_name (t);
@@ -1071,20 +1072,32 @@ main (int argc, char *argv[])
 		       rootdir_devices[0]);
 
     rootdir_grub_dev = grub_device_open (rootdir_grub_devname);
-    if (! rootdir_grub_dev)
-      grub_util_error ("%s", grub_errmsg);
+    if (!rootdir_grub_dev)
+      {
+	root_fs_name = grub_install_get_filesystem (t);
+	if (root_fs_name)
+	  grub_errno = 0;
+      }
+    else
+      {
+	grub_fs_t root_fs = grub_fs_probe (rootdir_grub_dev);
+	if (root_fs)
+	  root_fs_name = grub_strdup (root_fs->name);
+      }
 
-    root_fs = grub_fs_probe (rootdir_grub_dev);
-    if (!root_fs)
+    if (!root_fs_name)
       grub_util_error ("%s", grub_errmsg);
 
     if (config.is_suse_btrfs_snapshot_enabled
-	&& grub_strncmp(root_fs->name, "btrfs", sizeof ("btrfs") - 1) == 0)
+	&& root_fs_name
+	&& grub_strncmp(root_fs_name, "btrfs", sizeof ("btrfs") - 1) == 0)
       use_relative_path_on_btrfs = 1;
 
+    free (root_fs_name);
     free (t);
     free (rootdir_grub_devname);
-    grub_device_close (rootdir_grub_dev);
+    if (rootdir_grub_dev)
+      grub_device_close (rootdir_grub_dev);
   }
 
   switch (platform)
