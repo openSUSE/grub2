@@ -204,7 +204,8 @@ set_efi_variable_bootn (grub_uint16_t n, void *in, grub_size_t len)
 int
 grub_install_register_efi (grub_device_t efidir_grub_dev,
 			   const char *efifile_path,
-			   const char *efi_distributor)
+			   const char *efi_distributor,
+			   const char *force_disk)
 {
   grub_uint16_t *boot_order, *new_boot_order;
   grub_uint16_t *distributor16;

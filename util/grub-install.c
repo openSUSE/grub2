@@ -2129,7 +2129,8 @@ main (int argc, char *argv[])
 	      efidir_grub_disk[1] = NULL;
 	      ret = grub_install_register_efi (efidir_grub_disk,
 					       "\\System\\Library\\CoreServices",
-					       efi_distributor);
+					       efi_distributor,
+					       NULL);
 	      if (ret)
 	        grub_util_error (_("efibootmgr failed to register the boot entry: %s"),
 				 strerror (ret));
@@ -2166,6 +2167,7 @@ main (int argc, char *argv[])
 	  int ret;
 	  grub_disk_t *efidir_grub_disk;
 	  grub_disk_memberlist_t list = NULL, cur;
+	  char * force_disk = NULL;
 
 	  /* Try to make this image bootable using the EFI Boot Manager, if available.  */
 	  if (!efi_distributor || efi_distributor[0] == '\0')
@@ -2186,7 +2188,7 @@ main (int argc, char *argv[])
 	  raid_level = probe_raid_level (efidir_grub_dev->disk);
 	  if (raid_level >= 0 && raid_level != 1)
 	    grub_util_warn (_("unsupported raid level %d detected for efi system partition"), raid_level);
-	  if (raid_level == 1)
+	  if (raid_level == 1 && !efidir_grub_dev->disk->partition)
 	    {
 	      const char *raidname = NULL;
 
@@ -2210,6 +2212,8 @@ main (int argc, char *argv[])
 		    list = efidir_grub_dev->disk->dev->disk_memberlist (efidir_grub_dev->disk);
 		}
 	    }
+	  else if (raid_level == 1)
+	    force_disk = grub_util_get_os_disk (install_device);
 	  if (list)
 	    {
 	      int i;
@@ -2229,13 +2233,15 @@ main (int argc, char *argv[])
 	      efidir_grub_disk[1] = NULL;
 	    }
 	  ret = grub_install_register_efi (efidir_grub_disk,
-					   efifile_path, efi_distributor);
+					   efifile_path, efi_distributor,
+					   force_disk);
 	  while (list)
 	    {
 	      cur = list;
 	      list = list->next;
 	      grub_free (cur);
 	    }
+	  grub_free (force_disk);
 	  grub_free (efidir_grub_disk);
 	  if (ret)
 	    grub_util_error (_("efibootmgr failed to register the boot entry: %s"),

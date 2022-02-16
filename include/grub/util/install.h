@@ -220,7 +220,8 @@ grub_install_get_default_x86_platform (void);
 int
 grub_install_register_efi (const grub_disk_t *efidir_grub_disk,
 			   const char *efifile_path,
-			   const char *efi_distributor);
+			   const char *efi_distributor,
+			   const char *force_disk);
 
 void
 grub_install_register_ieee1275 (int is_prep, const char *install_device,

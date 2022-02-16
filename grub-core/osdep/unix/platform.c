@@ -134,7 +134,8 @@ grub_install_remove_efi_entries_by_distributor (const char *efi_distributor)
 int
 grub_install_register_efi (const grub_disk_t *efidir_grub_disk,
 			   const char *efifile_path,
-			   const char *efi_distributor)
+			   const char *efi_distributor,
+			   const char *force_disk)
 {
   int ret;
   const grub_disk_t *curdisk;
@@ -167,7 +168,7 @@ grub_install_register_efi (const grub_disk_t *efidir_grub_disk,
       char *new_efi_distributor = NULL;
       grub_disk_t disk = *curdisk;
 
-      efidir_disk = grub_util_biosdisk_get_osdev (disk);
+      efidir_disk = force_disk ? : grub_util_biosdisk_get_osdev (disk);
       if (!efidir_disk)
 	grub_util_error (_("%s: no device for efi"), disk->name);
 
