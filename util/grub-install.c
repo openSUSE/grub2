@@ -2201,9 +2201,14 @@ main (int argc, char *argv[])
 		    list = efidir_grub_dev->disk->dev->disk_memberlist (efidir_grub_dev->disk);
 		}
 	      else
-		grub_util_warn (_("this array has metadata at the start and may not be suitable as a efi system partition."
-		  " please ensure that your firmware understands md/v1.x metadata, or use --metadata=0.90"
-		  " to create the array."));
+		{
+		  grub_util_warn (_("this array has metadata at the start and may not be suitable as a efi system partition."
+		    " please ensure that your firmware understands md/v1.x metadata, or use --metadata=0.90"
+		    " to create the array."));
+		  /* Try to continue regardless metadata, nothing to lose here */
+		  if (efidir_grub_dev->disk->dev->disk_memberlist)
+		    list = efidir_grub_dev->disk->dev->disk_memberlist (efidir_grub_dev->disk);
+		}
 	    }
 	  if (list)
 	    {
