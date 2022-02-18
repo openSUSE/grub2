@@ -2624,3 +2624,8 @@ module = {
   common = lib/libtasn1_wrap/tests/Test_strings.c;
   common = lib/libtasn1_wrap/wrap_tests.c;
 };
+
+module = {
+  name = prep_loadenv;
+  common = commands/prep_loadenv.c;
+};
