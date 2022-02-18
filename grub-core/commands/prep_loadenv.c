@@ -10,6 +10,7 @@
 #include <grub/extcmd.h>
 #include <grub/i18n.h>
 #include <grub/gpt_partition.h>
+#include <regex.h>
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
@@ -185,6 +186,65 @@ prep_partname (const char *devname, char **prep)
 }
 
 static grub_err_t
+boot_disk_prep_partname (char **name)
+{
+  regex_t regex;
+  int ret;
+  grub_size_t s;
+  char *comperr;
+  const char *cmdpath;
+  regmatch_t *matches = NULL;
+  grub_err_t err = GRUB_ERR_NONE;
+
+  *name = NULL;
+
+  cmdpath = grub_env_get ("cmdpath");
+  if (!cmdpath)
+    return GRUB_ERR_NONE;
+
+  ret = regcomp (&regex, "\\(([^,]+)(,?.*)?\\)(.*)", REG_EXTENDED);
+  if (ret)
+    goto fail;
+
+  matches = grub_calloc (regex.re_nsub + 1, sizeof (*matches));
+  if (! matches)
+    goto fail;
+
+  ret = regexec (&regex, cmdpath, regex.re_nsub + 1, matches, 0);
+  if (!ret)
+    {
+      char *devname = devname = match_substr (matches + 1, cmdpath);
+      if (!devname)
+	{
+	  err = grub_error (GRUB_ERR_FILE_NOT_FOUND, "%s contains no disk name", cmdpath);
+	  goto out;
+	}
+
+      err = prep_partname (devname, name);
+ out:
+      grub_free (devname);
+      regfree (&regex);
+      grub_free (matches);
+      return err;
+    }
+
+ fail:
+  grub_free (matches);
+  s = regerror (ret, &regex, 0, 0);
+  comperr = grub_malloc (s);
+  if (!comperr)
+    {
+      regfree (&regex);
+      return grub_errno;
+    }
+  regerror (ret, &regex, comperr, s);
+  err = grub_error (GRUB_ERR_TEST_FAILURE, "%s", comperr);
+  regfree (&regex);
+  grub_free (comperr);
+  return err;
+}
+
+static grub_err_t
 grub_cmd_prep_loadenv (grub_command_t cmd __attribute__ ((unused)),
 		       int argc,
 		       char **argv)
@@ -211,10 +271,27 @@ grub_cmd_prep_loadenv (grub_command_t cmd __attribute__ ((unused)),
   return err;
 }
 
+static void
+early_prep_loadenv (void)
+{
+  grub_err_t err;
+  char *prep;
+
+  err = boot_disk_prep_partname (&prep);
+  if (err == GRUB_ERR_NONE && prep)
+    err = prep_read_envblk (prep);
+  if (err == GRUB_ERR_BAD_FILE_TYPE || err == GRUB_ERR_FILE_NOT_FOUND)
+    grub_error_pop ();
+  if (err != GRUB_ERR_NONE)
+    grub_print_error ();
+  grub_free (prep);
+}
+
 static grub_command_t cmd_prep_load;
 
 GRUB_MOD_INIT(prep_loadenv)
 {
+  early_env_hook = early_prep_loadenv;
   cmd_prep_load =
     grub_register_command("prep_load_env", grub_cmd_prep_loadenv,
 			  "DEVICE",
