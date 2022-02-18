@@ -28,6 +28,8 @@ static struct grub_env_context initial_context;
 /* The current context.  */
 struct grub_env_context *grub_current_context = &initial_context;
 
+void (*early_env_hook) (void) = NULL;
+
 /* Return the hash representation of the string S.  */
 static unsigned int
 grub_env_hashval (const char *s)

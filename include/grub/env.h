@@ -68,5 +68,6 @@ grub_env_extractor_open (int source);
 grub_err_t
 grub_env_extractor_close (int source);
 
+extern void (*EXPORT_VAR (early_env_hook)) (void);
 
 #endif /* ! GRUB_ENV_HEADER */

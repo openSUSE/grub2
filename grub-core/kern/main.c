@@ -310,6 +310,9 @@ grub_main (void)
 
   grub_boot_time ("Before execution of embedded config.");
 
+  if (early_env_hook != NULL)
+    early_env_hook ();
+
   if (load_config)
     grub_parser_execute (load_config);
 
