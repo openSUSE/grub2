@@ -56,4 +56,15 @@
 #  define CLANG_PREREQ(maj,min) 0
 #endif
 
+#if defined(__GNUC__)
+#  define grub_absolute_pointer(val)					\
+({									\
+	unsigned long __ptr;						\
+	__asm__ ("" : "=r"(__ptr) : "0"((void *)(val)));		\
+	(void *) (__ptr);						\
+})
+#else
+#  define grub_absolute_pointer(val) ((void *)(val))
+#endif
+
 #endif /* ! GRUB_COMPILER_HEADER */
