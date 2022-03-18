@@ -153,6 +153,50 @@ do_print (const char *x, void *data)
   grub_printf ("%s%c", x, delim);
 }
 
+static int
+check_duplicate_partmap (const char *name)
+{
+  static int alloc, used;
+  static char **partmaps;
+  int i;
+
+  if (!name)
+    {
+      if (partmaps)
+      {
+        for (i= 0; i < used; ++i)
+          free (partmaps[i]);
+        free (partmaps);
+        partmaps = NULL;
+        alloc = 0;
+        used = 0;
+      }
+      return 1;
+    }
+
+  for (i= 0; i < used; ++i)
+    if (strcmp (partmaps[i], name) == 0)
+      return 1;
+
+  if (alloc <= used)
+    {
+      alloc = (alloc) ? (alloc << 1) : 4;
+      partmaps = xrealloc (partmaps, alloc * sizeof (*partmaps));
+    }
+
+  partmaps[used++] = strdup (name);
+  return 0;
+}
+
+static void
+do_print_partmap (const char *x, void *data)
+{
+  char delim = *(const char *) data;
+  if (check_duplicate_partmap (x) != 0)
+    return;
+  grub_printf ("%s%c", x, delim);
+}
+
 static void
 probe_partmap (grub_disk_t disk, char delim)
 {
@@ -165,10 +209,14 @@ probe_partmap (grub_disk_t disk, char delim)
     }
 
   for (part = disk->partition; part; part = part->parent)
-    printf ("%s%c", part->partmap->name, delim);
+    {
+      if (check_duplicate_partmap (part->partmap->name) != 0)
+	continue;
+      printf ("%s%c", part->partmap->name, delim);
+    }
 
   if (disk->dev->id == GRUB_DISK_DEVICE_DISKFILTER_ID)
-    grub_diskfilter_get_partmap (disk, do_print, &delim);
+    grub_diskfilter_get_partmap (disk, do_print_partmap, &delim);
 
   /* In case of LVM/RAID, check the member devices as well.  */
   if (disk->dev->disk_memberlist)
@@ -674,8 +722,11 @@ probe (const char *path, char **device_names, char delim)
 	probe_cryptodisk_uuid (dev->disk, delim);
 
       else if (print == PRINT_PARTMAP)
-	/* Check if dev->disk itself is contained in a partmap.  */
-	probe_partmap (dev->disk, delim);
+	{
+	  /* Check if dev->disk itself is contained in a partmap.  */
+	  probe_partmap (dev->disk, delim);
+	  check_duplicate_partmap (NULL);
+	}
 
       else if (print == PRINT_PARTUUID)
 	{
