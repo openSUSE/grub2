@@ -96,6 +96,9 @@ END {
   }
   modlist = ""
   while (getline <"video.lst") {
+      if ($1 == "vga") {
+          continue;
+      }
       modlist = modlist " " $1;
   }
   printf "all_video:%s\n", modlist;

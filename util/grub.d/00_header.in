@@ -280,7 +280,15 @@ case x${GRUB_TERMINAL_OUTPUT} in
   ;;
   x*)
     cat << EOF
-terminal_output ${GRUB_TERMINAL_OUTPUT}
+
+for i in ${GRUB_TERMINAL_OUTPUT}; do
+  if [ x\${use_append} = xtrue ]; then
+     terminal_output --append \$i
+  elif terminal_output \$i; then
+     use_append=true;
+  fi
+done
+
 EOF
   ;;
 esac
