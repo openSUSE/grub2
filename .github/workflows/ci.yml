@@ -1,0 +1,43 @@
+name: CI unit test
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: "Install dependencies"
+      run: |
+        sudo sed -i '/deb-src/s/^# //' /etc/apt/sources.list
+        sudo apt-get update
+        sudo apt-get -y build-dep grub2
+        sudo apt-get -y install texlive ovmf
+        sudo apt-get -y install e2fsprogs hfsprogs ntfs-3g attr reiserfsprogs dosfstools util-linux xfsprogs f2fs-tools nilfs-tools genromfs udftools hfsprogs jfsutils btrfs-progs zfsutils-linux lzop
+        sudo apt-get -y install exfat-utils
+        # sudo apt-get -y install exfatprogs
+    - name: bootstrap
+      run: ./bootstrap
+    - name: run efi tests
+      run: |
+        mkdir -p build-efi
+        cd build-efi
+        ../configure --with-platform=efi
+        make
+        for f in hfsplus_test reiserfs_test minixfs_test f2fs_test nilfs2_test hfs_test jfs_test zfs_test; do echo 'exit 77' > $f; chmod +x $f; done
+        sudo make check
+    - name: 'Upload Artifact'
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: assets
+        path: |
+          build-efi/*.log
+          build-efi/*.trs
+        retention-days: 5
