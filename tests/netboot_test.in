@@ -35,8 +35,13 @@ case "${grub_modinfo_target_cpu}-${grub_modinfo_platform}" in
     # FIXME: We don't fully support netboot on ARC
     *-arc)
 	exit 77;;
+    # The x86_64-efi netboot via qemu and OVMF is verified to work
+    x86_64-efi) ;;
+    # FIXME: Skip other efi target due to lack of fact check
+    *-efi)
+        exit 77;;
     # FIXME: Many QEMU firmware have no netboot capability
-    *-efi | i386-ieee1275 | powerpc-ieee1275 | sparc64-ieee1275)
+    i386-ieee1275 | powerpc-ieee1275 | sparc64-ieee1275)
 	exit 77;;
 esac
 
