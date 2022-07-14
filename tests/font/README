@@ -1,0 +1,5 @@
+This font file is created on Ubuntu 22.04 using this command:
+
+  sudo apt-get install xfonts-unifont
+  grub-mkfont -o unicode.pf2 \
+  /usr/share/fonts/X11/misc/unifont.pcf.gz
